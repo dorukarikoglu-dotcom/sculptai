@@ -1012,7 +1012,7 @@ ${a.openStory ? `<div class="section"><div class="section-title">Hastanın Kendi
 }
 
 /* ─── PATIENT CARD ───────────────────────────────────────────────────────── */
-function PatientCard({patient,onDelete,isMobile,onConsult,mode,scoreBands}){
+function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
   const [open,setOpen]=useState(false);
   const [rendered,setRendered]=useState(false);
   const [cardError,setCardError]=useState(false);
@@ -1290,7 +1290,6 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode,scoreBands}){
 
           {/* Detay butonları */}
           <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #d4e1ef",padding:"10px 16px",display:"flex",gap:7,background:"#f8fafd",flexWrap:"wrap"}}>
-            {onConsult&&<button onClick={()=>onConsult(patient)} style={{padding:"8px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:"none",background:"#1e3a5f",color:"#f8fafd",cursor:"pointer"}}>◈ Konsültasyon</button>}
             <button onClick={handlePDF} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#2d5a8e",cursor:"pointer"}}>📄 PDF</button>
             {cls.ambassador&&!ambassadorSent&&<button onClick={e=>{e.stopPropagation();setShowAmbassador(v=>!v);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #ddd6fe",background:"transparent",color:"#7c3aed",cursor:"pointer"}}>🌟 Elçi</button>}
             {!confirm?<button onClick={e=>{e.stopPropagation();setConfirm(true);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",cursor:"pointer"}}>Sil</button>
@@ -1372,195 +1371,6 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode,scoreBands}){
 }
 
 /* ─── CONSULTATION MODE ──────────────────────────────────────────────────── */
-function ConsultationMode({patient, onClose, mode}){
-  const a=patient.answers||{};
-  const score=patient.risk_score||0;
-  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||V6B_THRESHOLD;
-  const effectiveThreshold=getEffectiveThreshold(clinicThreshold, mode||'balanced');
-  const cls=classify(score,a,effectiveThreshold);
-  const pred=predictOutcomes(score,a);
-  const name=a.name||"Hasta";
-  const proc=a.procedure||"İşlem";
-
-  // Konsültasyon süresi önerisi
-  const consultDuration=(()=>{
-    if(cls.cat==="red") return {min:25,label:"25–30 dk",color:"#dc2626",note:"Beklenti yönetimi + detaylı bilgilendirme gerekli"};
-    if(cls.cat==="amber") return {min:20,label:"20 dk",color:"#d97706",note:"Standart + ek sorgulama önerilir"};
-    if(cls.cat==="ambassador") return {min:12,label:"10–15 dk",color:"#059669",note:"Düşük risk — hızlı ve güven verici"};
-    return {min:15,label:"15 dk",color:"#059669",note:"Standart konsültasyon yeterli"};
-  })();
-
-  // Dikkat Edilmesi Gerekenler
-  const donts=[];
-  if(a.revision==="Kusursuz sonuç bekliyorum") donts.push("\"Mükemmel sonuç garantisi\" ifadesinden kaçınmak faydalı olabilir — beklentiyi artırabilir");
-  if(["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].some(x=>a.motivation===x)) donts.push("\"Çevreniz de farkı görecek\" ifadesinden kaçınılabilir — dışsal motivasyonu pekiştirebilir");
-  if(a.decisionDuration==="Yeni karar verdim — heyecanlı ve kararlı hissediyorum") donts.push("Hemen operasyon tarihi vermek yerine düşünme süresi tanımak faydalı olabilir");
-  if(a.multiDoctor==="Birçok doktora danıştım") donts.push("Diğer doktorları eleştirmekten kaçınmak önerilir — güvensizliği artırabilir");
-  if(a.expectation?.includes("Tamamen farklı")) donts.push("\"Tamamen değişeceksiniz\" yerine doğal sınırları erken netleştirmek faydalı olabilir");
-  if(a.breastSymmetry==="Çok küçük bir fark var ama bu küçük fark bile beni rahatsız ediyor") donts.push("\"Fark yok\" ifadesinden kaçınılabilir — hastanın algısını küçümseyebilir");
-  if(pred.rev>=40) donts.push("Operasyon sonrası fotoğraf sözü vermekten kaçınılabilir — beklenti tuzağı oluşturabilir");
-
-  // Konsültasyon checklist
-  const checklist=[];
-  checklist.push("Hastanın kendi motivasyonunu dinlemek faydalı olabilir (ilk 2 dk söz kesmeden)");
-  if(cls.cat==="red"||cls.cat==="amber") checklist.push("Beklenti sınırlarını erken netleştirmek faydalı olabilir — referans fotoğraflarla somutlaştırabilirsiniz");
-  if(proc.includes("Burun")) checklist.push("Dijital simülasyon veya benzer vaka fotoğrafı paylaşmayı düşünebilirsiniz");
-  if(proc.includes("Meme")) checklist.push("Beden oranlarına uygun protez/yöntem aralığını paylaşabilirsiniz");
-  if(a.support?.includes("Kimseye")||a.support?.includes("karşılar")) checklist.push("İyileşme sürecinde destek durumunu sormak değerli olabilir");
-  if(a.prevSurgery?.includes("memnun kalmadım")) checklist.push("Önceki deneyimini dinlemek faydalı olabilir — ne bekledi, ne aldı?");
-  checklist.push("İyileşme sürecini somut bir takvimle paylaşabilirsiniz");
-  checklist.push("Sorularını sormaya teşvik edebilirsiniz — sessiz kalırsa \"başka merak ettiğiniz bir şey var mı?\" diye sorabilirsiniz");
-  // Konuşulacaklar — risk sinyallerinden otomatik üret
-  const talkingPoints=[];
-  if(a.rhinoVision==="Aklımda belirli bir referans var — bir ünlü veya fotoğraf")
-    talkingPoints.push({text:"Referans beklentisini netleştirmek",sub:"Aklında belirli bir referans olduğunu belirtti — kendi yüz yapısına uygun sonucu açıklamak faydalı olabilir"});
-  if(a.revision==="Kusursuz sonuç bekliyorum")
-    talkingPoints.push({text:"Revizyon ihtimali konuşması",sub:"Kusursuz sonuç beklentisi var — revizyonun nadir ama olası bir süreç olduğunu çerçeveleyerek aktarabilirsiniz"});
-  if(a.breastSymmetry==="Çok küçük bir fark var ama bu küçük fark bile beni rahatsız ediyor")
-    talkingPoints.push({text:"Simetri beklentisini çerçevelemek",sub:"Mevcut asimetri küçük ama çok rahatsız ediyor — memeler kardeştir, ikiz değildir"});
-  if(a.expectation?.includes("Tamamen farklı"))
-    talkingPoints.push({text:"Beklenti yönetimi",sub:"Tamamen farklı görünmek istiyor — mümkün olan değişimi fotoğraflarla somutlaştırabilirsiniz"});
-  if(["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].some(x=>a.motivation===x))
-    talkingPoints.push({text:"Motivasyonu netleştirmek",sub:"Dışsal baskı bileşeni var — kendi isteği mi çevre baskısı mı olduğunu anlamak değerli"});
-  if(a.decisionDuration==="Uzun süredir düşünüyorum ama hâlâ kararsız hissediyorum")
-    talkingPoints.push({text:"Karar netliği düşük görünüyor",sub:"Uzun süredir düşünüyor ama hâlâ kararsız — ne engelliyor? Bilgi mi, destek mi, korku mu?"});
-  if(a.decisionDuration==="Yeni karar verdim — heyecanlı ve kararlı hissediyorum")
-    talkingPoints.push({text:"Acele karar sinyali",sub:"Çok yeni karar — heyecanın yerini gerçekçi beklentiye bırakması için süreci paylaşabilirsiniz"});
-  if((a.otherAreas&&a.otherAreas!=="Hayır, sadece bu bölge")||(a.otherConsidered&&a.otherConsidered!=="Hayır")){
-    const crossSuggs = getCrossSellSuggestion(a);
-    if(crossSuggs.length>0){
-      talkingPoints.push({text:"Ek işlem fırsatı",sub:`${crossSuggs[0].proc} — %${crossSuggs[0].prob} ihtimal (${crossSuggs[0].reason})`});
-    } else {
-      talkingPoints.push({text:"Ek işlem sinyali",sub:`Başka bölge ilgisi var — ${a.otherAreas||a.otherConsidered}`});
-    }
-  } else {
-    // Prosedüre göre otomatik cross-sell önerisi
-    const crossSuggs = getCrossSellSuggestion(a);
-    if(crossSuggs.length>0){
-      talkingPoints.push({text:"Cross-sell fırsatı",sub:`${crossSuggs[0].proc} sorulabilir — %${crossSuggs[0].prob} ihtimal`});
-    }
-  }
-  if(talkingPoints.length===0)
-    talkingPoints.push({text:"Standart konsültasyon",sub:"Belirgin risk sinyali yok — beklentiyi teyit etmek ve süreci paylaşmak yeterli olacaktır"});
-
-  // Risk sinyalleri
-  const flags=[];
-  if(a.rhinoVision==="Aklımda belirli bir referans var — bir ünlü veya fotoğraf") flags.push({txt:"Belirli bir referans var — kendi yüzüne uygun sonuç değil, başka birinin özelliğini istiyor olabilir",sev:"red"});
-  if(a.revision==="Kusursuz sonuç bekliyorum") flags.push({txt:"Kusursuz sonuç beklentisi — revizyon ihtimalini kabul etmiyor",sev:"red"});
-  if(a.breastSymmetry==="Çok küçük bir fark var ama bu küçük fark bile beni rahatsız ediyor") flags.push({txt:"Küçük asimetri bile rahatsız ediyor — postop memnuniyetsizlik riski yüksek",sev:"red"});
-  if(["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].some(x=>a.motivation===x)) flags.push({txt:"Dışsal motivasyon bileşeni var",sev:"amber"});
-  if(a.multiDoctor==="Birçok doktora danıştım") flags.push({txt:"Birçok doktora danışmış — kararsızlık veya yüksek standart",sev:"amber"});
-  if(a.support?.includes("Kimseye")||a.support?.includes("karşılar")) flags.push({txt:"Sosyal destek zayıf — iyileşme sürecinde yalnız kalabilir",sev:"amber"});
-  if(flags.length===0) flags.push({txt:"Belirgin risk sinyali saptanmadı",sev:"green"});
-
-  const C={red:"#dc2626",amber:"#d97706",green:"#059669"};
-
-  return(
-    <div style={{position:"fixed",inset:0,background:"#f8fafd",zIndex:1000,display:"flex",flexDirection:"column",fontFamily:"'Nunito',sans-serif"}}>
-
-      {/* TOPBAR */}
-      <div style={{background:"#1e3a5f",padding:"10px 14px",display:"flex",alignItems:"center",justifyContent:"space-between",flexShrink:0}}>
-        <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
-          <div style={{width:7,height:7,background:"#2d5a8e",borderRadius:"50%",flexShrink:0}}/>
-          <div style={{minWidth:0}}>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"#f8fafd",fontWeight:300,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{name}</div>
-            <div style={{fontSize:11,color:"rgba(245,240,232,0.4)",marginTop:1}}>{a.age&&`${a.age} yaş · `}{proc}</div>
-          </div>
-          <div style={{padding:"2px 8px",borderRadius:20,background:cls.bg,border:`1px solid ${cls.border}`,fontSize:11,fontWeight:500,color:cls.textColor,flexShrink:0}}>{cls.icon}</div>
-        </div>
-        <button onClick={onClose} style={{background:"rgba(245,240,232,0.12)",color:"#f8fafd",border:"1px solid rgba(245,240,232,0.2)",borderRadius:8,padding:"7px 14px",fontSize:13,fontWeight:500,cursor:"pointer",flexShrink:0,marginLeft:8}}>
-          ← Geri
-        </button>
-      </div>
-
-      {/* CONTENT */}
-      <div style={{flex:1,overflowY:"auto",padding:"14px 14px",maxWidth:720,margin:"0 auto",width:"100%"}}>
-
-        {/* Süre önerisi + metrikler */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6,marginBottom:14}}>
-          <div style={{background:"#1e3a5f",borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-            <div style={{fontSize:20,fontWeight:600,color:"#f8fafd",lineHeight:1.1}}>{consultDuration.label}</div>
-            <div style={{fontSize:8,color:"rgba(248,250,253,0.6)",textTransform:"uppercase",letterSpacing:"0.06em",marginTop:3}}>Önerilen Süre</div>
-          </div>
-          <div style={{background:score>=60?"#fef2f2":score>=40?"#fffbeb":"#ecfdf5",border:`1px solid ${score>=60?"#fecaca":score>=40?"#fde68a":"#a7f3d0"}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-            <div style={{fontSize:20,fontWeight:600,color:score>=60?"#dc2626":score>=40?"#d97706":"#059669",lineHeight:1.1}}>%{Math.max(5,Math.min(95,100-score))}</div>
-            <div style={{fontSize:8,color:score>=60?"#dc2626":score>=40?"#d97706":"#059669",opacity:0.7,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:3}}>Randevu Olasılığı</div>
-          </div>
-          {[
-            {val:`${pred.rev}%`,lbl:"Revizyon Riski",color:pred.rev>=50?"#dc2626":pred.rev>=30?"#d97706":"#059669",bg:pred.rev>=50?"#fef2f2":pred.rev>=30?"#fffbeb":"#ecfdf5",border:pred.rev>=50?"#fecaca":pred.rev>=30?"#fde68a":"#a7f3d0"},
-            {val:pred.fit,lbl:"Uygunluk",color:pred.fitColor,bg:pred.fitBg,border:`${pred.fitColor}44`},
-          ].map((m,i)=>(
-            <div key={i} style={{background:m.bg,border:`1px solid ${m.border}`,borderRadius:10,padding:"10px 6px",textAlign:"center"}}>
-              <div style={{fontSize:20,fontWeight:600,color:m.color,lineHeight:1.1}}>{m.val}</div>
-              <div style={{fontSize:8,color:m.color,opacity:0.7,textTransform:"uppercase",letterSpacing:"0.06em",marginTop:3}}>{m.lbl}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Yaklaşım önerisi */}
-        <div style={{background:"#eff6ff",border:"1px solid #c4b5fd",borderRadius:10,padding:"11px 14px",marginBottom:16,display:"flex",gap:10,alignItems:"flex-start"}}>
-          <div style={{width:6,height:6,borderRadius:"50%",background:"#7c3aed",marginTop:5,flexShrink:0}}/>
-          <div>
-            <div style={{fontSize:12,fontWeight:500,color:"#5b21b6",marginBottom:2}}>{pred.approach}</div>
-            <div style={{fontSize:13,color:"#6d28d9",lineHeight:1.55}}>{pred.approachDesc}</div>
-          </div>
-        </div>
-
-        {/* Konuşulacaklar */}
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,marginBottom:8}}>Bugün Konuşulacaklar</div>
-        <div style={{background:"white",border:"1px solid #d4e1ef",borderRadius:10,marginBottom:16,overflow:"hidden"}}>
-          {talkingPoints.map((t,i)=>(
-            <div key={i} style={{display:"flex",gap:12,padding:"12px 14px",borderBottom:i<talkingPoints.length-1?"1px solid #eef3f9":"none"}}>
-              <div style={{width:22,height:22,borderRadius:"50%",background:"#1d4ed8",color:"#f8fafd",fontSize:12,fontWeight:500,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>{i+1}</div>
-              <div>
-                <div style={{fontSize:13,fontWeight:500,color:"#1e3a5f",marginBottom:2}}>{t.text}</div>
-                <div style={{fontSize:13,color:"#7b9ab5",lineHeight:1.55}}>{t.sub}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Dikkat Edilmesi Gerekenler */}
-        {donts.length>0&&(<>
-          <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#dc2626",fontWeight:500,marginBottom:8}}>Dikkat Edilmesi Gerekenler</div>
-          <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,marginBottom:16,overflow:"hidden"}}>
-            {donts.map((d,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:i<donts.length-1?"1px solid #fee2e2":"none"}}>
-                <div style={{color:"#dc2626",fontSize:14,flexShrink:0,marginTop:1}}>✕</div>
-                <div style={{fontSize:13,color:"#991b1b",lineHeight:1.55}}>{d}</div>
-              </div>
-            ))}
-          </div>
-        </>)}
-
-        {/* Checklist */}
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#059669",fontWeight:500,marginBottom:8}}>Konsültasyon Checklist</div>
-        <div style={{background:"#f0fdf4",border:"1px solid #a7f3d0",borderRadius:10,marginBottom:16,overflow:"hidden"}}>
-          {checklist.map((c,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:i<checklist.length-1?"1px solid #dcfce7":"none"}}>
-              <div style={{width:18,height:18,borderRadius:4,border:"1.5px solid #a7f3d0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,color:"#059669",flexShrink:0,marginTop:1}}>☐</div>
-              <div style={{fontSize:13,color:"#065f46",lineHeight:1.55}}>{c}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Risk sinyalleri */}
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,marginBottom:8}}>Risk Sinyalleri</div>
-        <div style={{background:"white",border:"1px solid #d4e1ef",borderRadius:10,overflow:"hidden"}}>
-          {flags.map((f,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,padding:"10px 14px",borderBottom:i<flags.length-1?"1px solid #eef3f9":"none",background:f.sev==="green"?"#f0fdf4":"white"}}>
-              <div style={{width:7,height:7,borderRadius:"50%",background:C[f.sev],marginTop:4,flexShrink:0}}/>
-              <div style={{fontSize:13,color:f.sev==="red"?"#7f1d1d":f.sev==="amber"?"#78350f":"#065f46",lineHeight:1.55}}>{f.txt}</div>
-            </div>
-          ))}
-        </div>
-
-      </div>
-    </div>
-  );
-}
-
-/* ─── VALUE SCREEN ───────────────────────────────────────────────────────── */
 function ValueScreen({patients,doctor}){
   const total=patients.length;
   const crossSells=patients.filter(p=>p.outcome_procedures&&p.outcome_procedures.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
@@ -2330,7 +2140,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
   const [search,setSearch]=useState("");
   const [thresholdMode,setThresholdMode]=useState(()=>localStorage.getItem('threshold_mode')||'balanced');
   const [tab,setTab]=useState("patients"); // patients | analytics | value | settings
-  const [consultPatient,setConsultPatient]=useState(null); // konsültasyon modu
   const [isMobile,setIsMobile]=useState(window.innerWidth<768);
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   useEffect(()=>{
@@ -2461,7 +2270,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
     <div style={{display:"flex",flexDirection:isMobile?"column":"row",height:"100vh",overflow:"hidden",fontFamily:"'Nunito',sans-serif"}}>
 
       {/* KONSÜLTASYOn MODU — overlay */}
-      {consultPatient&&<ConsultationMode patient={consultPatient} onClose={()=>setConsultPatient(null)} mode={thresholdMode}/>}
 
       {/* SESSION TIMEOUT UYARISI */}
       {sessionWarning&&(
@@ -2597,7 +2405,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           {search.trim()&&(
             <div style={{fontSize:12,color:"#7b9ab5",marginBottom:8}}>"{search}" için {displayed.length} sonuç</div>
           )}
-          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode} scoreBands={scoreBands}/>)}</div>
+          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} mode={thresholdMode} scoreBands={scoreBands}/>)}</div>
 
           {ambassadors.length>0&&(
             <div className="f5">
@@ -2606,7 +2414,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
                 <div style={{fontSize:12,color:"#a78bfa",background:"#faf5ff",padding:"2px 10px",borderRadius:10,border:"1px solid #ede9fe",letterSpacing:"0.08em",fontWeight:500}}>Ticari Fırsat</div>
                 <div style={{flex:1,height:1,background:"#f1f3f5"}}/>
               </div>
-              {ambassadors.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode} scoreBands={scoreBands}/>)}
+              {ambassadors.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} mode={thresholdMode} scoreBands={scoreBands}/>)}
             </div>
           )}
 
