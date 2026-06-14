@@ -1218,127 +1218,116 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
       setOpen(o=>!o);
     }
   }
+  // ── Next Best Action — v6b feature'larına dayalı ──
+  const nba=[];
+  const noRiskKnow_c=a.riskKnowledge==="Hiçbir bilgim yok";
+  const someRiskKnow_c=a.riskKnowledge==="Genel olarak bilgi sahibiyim";
+  const unrealistic_c=a.revision==="Kusursuz sonuç bekliyorum";
+  const revWorried_c=a.revision==="Revizyon beni endişelendiriyor";
+  const prevBad_c=a.prevSurgery==="Evet ve hiç memnun değilim"||a.prevSurgery==="Evet ama beklentimi karşılamadı";
+  const procRiskVal_c=PROC_RISK_MAP[a.procedure]??0.3;
+  const highProcRisk_c=procRiskVal_c>=0.35;
+  if(noRiskKnow_c) nba.push({icon:"📋",txt:"Bilgilendir — işlem hakkında bilgisi yok, süreç ve iyileşmeyi anlat"});
+  else if(someRiskKnow_c&&score>=35) nba.push({icon:"📋",txt:"Bilgi eksiklerini tamamla — genel bilgisi var ama detaylar eksik"});
+  if(unrealistic_c) nba.push({icon:"🎯",txt:"Beklenti yönet — kusursuz sonuç beklentisi var, doktoru erken devreye al"});
+  else if(revWorried_c) nba.push({icon:"🤝",txt:"Güven ver — revizyon endişesi var, sürecin güvenliğini vurgula"});
+  if(prevBad_c) nba.push({icon:"🏥",txt:"Güven inşa et — geçmişte kötü deneyim yaşamış, klinik farkını göster"});
+  if(highProcRisk_c) nba.push({icon:"⭐",txt:"Uzmanlık vurgula — karmaşık prosedür, doktorun deneyimini ön plana çıkar"});
+  if(nba.length===0) nba.push({icon:"✓",txt:"Standart takip — belirgin engel yok"});
+
+  const approachLabel=cls.cat==="red"?"Dikkatli yaklaş":cls.cat==="amber"?"Orta":cls.cat==="ambassador"?"VIP":"Yüksek potansiyel";
+  const approachColor=cls.cat==="red"?"#dc2626":cls.cat==="amber"?"#d97706":"#059669";
+  const approachBg=cls.cat==="red"?"#fef2f2":cls.cat==="amber"?"#fffbeb":"#ecfdf5";
+  const approachBorder=cls.cat==="red"?"#fecaca":cls.cat==="amber"?"#fde68a":"#a7f3d0";
+  const pipelineStatus=noAppointment?"lost":outcomeProcedures.length>0?(hadProcedure===true?"converted":"appointment"):"new";
+  const sourceLabel=a.source||"";
+  const dateStr=patient.created_at?new Date(patient.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):"";
+
   return(
     <div onClick={handleToggle} style={{background:"#f8fafd",borderRadius:10,border:`1px solid ${open?"#1e3a5f":"#d4e1ef"}`,marginBottom:8,overflow:"hidden",cursor:"pointer",transition:"border-color 0.15s",WebkitTapHighlightColor:"transparent"}}>
-      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",background:noAppointment?"#fff5f5":outcomeProcedures.length>0?"#f0fdf4":"transparent",minWidth:0,overflow:"hidden"}}>
-        {/* Left accent */}
-        <div style={{width:2,height:36,borderRadius:1,background:noAppointment?"#fca5a5":outcomeProcedures.length>0?"#86efac":cls.color,flexShrink:0}}/>
-        {/* Segment pill — kısa label */}
-        <div style={{padding:"2px 6px",borderRadius:20,background:cls.bg,border:`1px solid ${cls.border}`,flexShrink:0,maxWidth:60}}>
-          <div style={{fontSize:9,fontWeight:500,textTransform:"uppercase",color:cls.textColor,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{cls.icon}</div>
+      <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",minWidth:0,overflow:"hidden"}}>
+        {/* Approach accent */}
+        <div style={{width:3,height:40,borderRadius:2,background:approachColor,flexShrink:0}}/>
+        {/* Approach badge */}
+        <div style={{padding:"3px 8px",borderRadius:20,background:approachBg,border:`1px solid ${approachBorder}`,flexShrink:0}}>
+          <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",color:approachColor,whiteSpace:"nowrap",letterSpacing:"0.04em"}}>{approachLabel}</div>
         </div>
-        {/* Name + procedure — flex:1 minWidth:0 kritik */}
+        {/* Name + procedure + source */}
         <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:400,color:"#1e3a5f",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name||"İsimsiz Hasta"}</div>
-          <div style={{fontSize:12,color:"#7b9ab5",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.age?`${a.age} yaş · `:""}{a.procedure}</div>
-          {noAppointment&&<div style={{fontSize:9,color:"#dc2626",fontWeight:500,marginTop:1,whiteSpace:"nowrap"}}>✕ Randevu Yok</div>}
-          {/* 5 outcome mini gösterge */}
-          {!noAppointment&&(
-            <div style={{display:"flex",gap:3,marginTop:2}}>
-              {[
-                {done:outcomeProcedures.length>0, label:"R", title:"Randevu"},
-                {done:hadProcedure===true, neg:hadProcedure===false, label:"A", title:"Ameliyat"},
-                {done:!!sat1m, label:"1", title:"1 Ay"},
-                {done:!!sat6m, label:"6", title:"6 Ay"},
-                {done:referredCount>0, label:"↗", title:"Referans"},
-              ].map((item,i)=>(
-                <div key={i} title={item.title} style={{
-                  width:14,height:14,borderRadius:3,fontSize:8,fontWeight:600,
-                  display:"flex",alignItems:"center",justifyContent:"center",
-                  background:item.done?"#059669":item.neg?"#dc2626":"#e2e8f0",
-                  color:item.done||item.neg?"white":"#94a3b8",
-                }}>{item.label}</div>
-              ))}
-            </div>
-          )}
-        </div>
-        {/* Tarih + model badge + hızlı randevu yok + chevron */}
-        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:3,flexShrink:0,width:52}}>
-          <div style={{fontSize:11,color:"#7b9ab5",whiteSpace:"nowrap"}}>{patient.created_at?new Date(patient.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):""}</div>
-          <div title={modelInfo.source==="clinic"?`${modelInfo.label} · %${modelInfo.accuracy?Math.round(modelInfo.accuracy*100):"—"} doğruluk`:"Global model — klinik modeli henüz yok"}
-            style={{fontSize:8,fontWeight:600,color:modelInfo.color,background:modelInfo.source==="clinic"?"#eff6ff":"#f1f5f9",padding:"1px 4px",borderRadius:3,letterSpacing:"0.04em"}}>
-            {modelInfo.source==="clinic"?`v${clinicModelCache[patient.doctor_id]?.version||1}`:"GLB"}
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:400,color:"#1e3a5f",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name||"İsimsiz"}</div>
+          <div style={{fontSize:12,color:"#7b9ab5",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.procedure}{sourceLabel?` · ${sourceLabel}`:""}</div>
+          {/* Pipeline mini */}
+          <div style={{display:"flex",gap:3,marginTop:3}}>
+            {[{k:"new",l:"Y",done:true},{k:"appt",l:"R",done:pipelineStatus==="appointment"||pipelineStatus==="converted"},{k:"conv",l:"D",done:pipelineStatus==="converted"}].map(s=>(
+              <div key={s.k} style={{width:15,height:15,borderRadius:3,fontSize:8,fontWeight:700,display:"flex",alignItems:"center",justifyContent:"center",
+                background:pipelineStatus==="lost"&&s.k!=="new"?"#fee2e2":s.done?"#059669":"#e2e8f0",
+                color:pipelineStatus==="lost"&&s.k!=="new"?"#dc2626":s.done?"white":"#94a3b8"
+              }}>{s.k==="new"&&pipelineStatus==="lost"?"✕":s.l}</div>
+            ))}
           </div>
-          {/* Hızlı randevu yok — açmadan tıklanabilir */}
-          {!noAppointment&&!outcomeProcedures.length&&(
-            <button
-              onClick={async e=>{e.stopPropagation();if(window.confirm("Randevu alınmadı olarak işaretlensin mi?")){await markNoAppointment();}}}
-              title="Randevu Alınmadı"
-              style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:5,padding:"2px 5px",cursor:"pointer",lineHeight:1.2,letterSpacing:"0.02em"}}>
-              ✕ RY
-            </button>
-          )}
-          {noAppointment&&(
-            <div style={{fontSize:9,fontWeight:700,color:"#ef4444",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:5,padding:"2px 5px",lineHeight:1.2}}>✕ RY</div>
-          )}
+        </div>
+        {/* Date + chevron */}
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4,flexShrink:0}}>
+          <div style={{fontSize:11,color:"#7b9ab5",whiteSpace:"nowrap"}}>{dateStr}</div>
           <div style={{fontSize:14,color:"#7b9ab5",transform:open?"rotate(90deg)":"none",transition:"transform 0.2s"}}>›</div>
         </div>
       </div>
-        {/* No appointment badge */}
-        {noAppointment&&(
-          <div onClick={e=>e.stopPropagation()} style={{padding:"5px 18px",background:"#fef2f2",borderTop:"1px solid #fecaca",display:"flex",alignItems:"center",gap:8}}>
-            <div style={{fontSize:12,color:"#dc2626",fontWeight:500}}>✕ Randevu Alınmadı</div>
-            <button onClick={async e=>{e.stopPropagation();try{const {error}=await sb.from("patients").update({no_appointment:false}).eq("id",patient.id);if(error) throw error;setNoAppointment(false);}catch{alert("Geri alma başarısız — tekrar deneyin.");}}} style={{fontSize:11,color:"#7b9ab5",background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline"}}>Geri Al</button>
-          </div>
-        )}
       {cardError&&<div style={{padding:12,fontSize:12,color:"#dc2626"}}>Detay yüklenemedi</div>}
       {rendered&&!cardError&&open&&(
         <div style={{borderTop:"1px solid #d4e1ef",animation:"fadeUp 0.18s ease"}}>
-          {/* Observation strip */}
-          <div style={{padding:"12px 18px",background:cls.bg,borderBottom:`1px solid ${cls.border}`,display:"flex",alignItems:"flex-start",gap:10}}>
-            <div style={{fontSize:15,flexShrink:0,marginTop:1}}>{cls.icon}</div>
-            <div style={{flex:1}}>
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:2}}>
-                <div style={{fontSize:13,fontWeight:500,color:cls.textColor}}>{cls.obs}</div>
-                <span style={{fontSize:11,padding:"1px 7px",borderRadius:10,background:"#1e3a5f",color:"#f8fafd",fontWeight:500,flexShrink:0}}>%{Math.max(5,Math.min(95,100-score))} randevu alır</span>
-              </div>
-              <div style={{fontSize:13,lineHeight:1.65,color:cls.textColor,opacity:0.8}}>{cls.obsBody}</div>
-            </div>
-          </div>
-          {/* Signal boxes */}
-          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",borderBottom:"1px solid #d4e1ef"}}>
-            {signals.map((s,i)=>(
-              <div key={i} style={{padding:"10px 16px",borderRight:i<2?"1px solid #d4e1ef":"none"}}>
-                <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#7b9ab5",marginBottom:3}}>{s.label}</div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"#1e3a5f"}}>{s.val}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* CROSS-SELL SİNYALİ */}
-          {((a.otherAreas&&a.otherAreas!=="Hayır, sadece bu bölge")||(a.otherConsidered&&a.otherConsidered!=="Hayır"))&&(
-            <div style={{padding:"10px 18px",borderBottom:"1px solid #d4e1ef",background:"#f0fdf4"}}>
-              <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#059669",marginBottom:5,fontWeight:500}}>↗ Ek İşlem İlgisi</div>
-              <div style={{display:"flex",flexDirection:"column",gap:3}}>
-                {a.otherAreas&&a.otherAreas!=="Hayır, sadece bu bölge"&&(
-                  <div style={{fontSize:13,color:"#065f46",lineHeight:1.5}}>
-                    <span style={{color:"#7b9ab5",marginRight:5}}>Başka bölge:</span>{a.otherAreas}
-                  </div>
-                )}
-                {a.otherConsidered&&a.otherConsidered!=="Hayır"&&(
-                  <div style={{fontSize:13,color:"#065f46",lineHeight:1.5}}>
-                    <span style={{color:"#7b9ab5",marginRight:5}}>Başka işlem düşünmüş:</span>{a.otherConsidered}
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* AÇIK UÇLU SORU — Ayna */}
-          {a.openStory&&(
-            <div style={{padding:"12px 18px",borderBottom:"1px solid #d4e1ef",background:"#eef3f9"}}>
-              <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:"#1d4ed8",marginBottom:6,fontWeight:500}}>Değişim Beklentisi — Kendi Sözleriyle</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:300,color:"#1e3a5f",lineHeight:1.8,fontStyle:"italic"}}>"{a.openStory}"</div>
-              {storyRedFlag&&(
-                <div style={{marginTop:8,padding:"5px 10px",background:"#fef2f2",border:"1px solid #fecaca",borderRadius:6,fontSize:11,color:"#dc2626",fontWeight:500}}>
-                  ⚠ Yüksek beklenti sinyali — cevabında dikkat çekici ifadeler var
+          {/* NBA — Next Best Action */}
+          <div style={{padding:"12px 16px",background:"#f8fafd"}}>
+            <div style={{fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",color:"#1e3a5f",marginBottom:8,fontWeight:600}}>Önerilen Aksiyon</div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {nba.map((n,i)=>(
+                <div key={i} style={{display:"flex",gap:8,alignItems:"flex-start"}}>
+                  <div style={{fontSize:14,flexShrink:0,marginTop:1}}>{n.icon}</div>
+                  <div style={{fontSize:13,color:"#1e3a5f",lineHeight:1.55}}>{n.txt}</div>
                 </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Pipeline — tek tıkla */}
+          <div onClick={e=>e.stopPropagation()} style={{padding:"10px 16px",borderTop:"1px solid #d4e1ef",background:"#eef3f9"}}>
+            <div style={{fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",color:"#7b9ab5",marginBottom:8,fontWeight:500}}>Pipeline</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <button onClick={()=>{if(outcomeProcedures.length===0){setOutcomeProcedures([a.procedure||"İşlem"]);saveOutcome();}else setShowOutcome(v=>!v);}}
+                style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:`1.5px solid ${outcomeProcedures.length>0?"#059669":"#d4e1ef"}`,background:outcomeProcedures.length>0?"#059669":"white",color:outcomeProcedures.length>0?"white":"#7b9ab5",cursor:"pointer"}}>
+                {outcomeProcedures.length>0?"✓ Randevu":"Randevu al"}
+              </button>
+              {outcomeProcedures.length>0&&(
+                <button onClick={()=>{if(hadProcedure!==true){setHadProcedure(true);saveProcedure();}else setShowProcedure(v=>!v);}}
+                  style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:`1.5px solid ${hadProcedure===true?"#059669":"#d4e1ef"}`,background:hadProcedure===true?"#059669":"white",color:hadProcedure===true?"white":"#7b9ab5",cursor:"pointer"}}>
+                  {hadProcedure===true?"✓ Dönüştü":"Dönüştür"}
+                </button>
+              )}
+              {!noAppointment&&(
+                <button onClick={async()=>{if(window.confirm("Kayıp olarak işaretlensin mi?"))await markNoAppointment();}}
+                  style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:"1.5px solid #fecaca",background:"white",color:"#dc2626",cursor:"pointer"}}>Kayıp</button>
+              )}
+              {noAppointment&&(
+                <button onClick={async()=>{try{await sb.from("patients").update({no_appointment:false}).eq("id",patient.id);setNoAppointment(false);}catch{alert("Geri alma başarısız.");}}}
+                  style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:"1.5px solid #fecaca",background:"#fef2f2",color:"#dc2626",cursor:"pointer"}}>✕ Kayıp — Geri Al</button>
               )}
             </div>
-          )}
+          </div>
 
-          {/* TIMING — Soru Davranışı */}
-          {patient.question_times&&Object.keys(patient.question_times.questionTimes||{}).length>0&&(()=>{
+
+          {/* Detay butonları */}
+          <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #d4e1ef",padding:"10px 16px",display:"flex",gap:7,background:"#f8fafd",flexWrap:"wrap"}}>
+            {onConsult&&<button onClick={()=>onConsult(patient)} style={{padding:"8px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:"none",background:"#1e3a5f",color:"#f8fafd",cursor:"pointer"}}>◈ Konsültasyon</button>}
+            <button onClick={handlePDF} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#2d5a8e",cursor:"pointer"}}>📄 PDF</button>
+            {hadProcedure===true&&<>
+              <button onClick={e=>{e.stopPropagation();setShowSat1m(v=>!v);setShowSat6m(false);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:`1px solid ${sat1m?"#059669":"#d4e1ef"}`,background:"transparent",color:sat1m?"#059669":"#7b9ab5",cursor:"pointer"}}>{sat1m?`1ay: ${sat1m}`:"1 Ay"}</button>
+              <button onClick={e=>{e.stopPropagation();setShowSat6m(v=>!v);setShowSat1m(false);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:`1px solid ${sat6m?"#1d4ed8":"#d4e1ef"}`,background:"transparent",color:sat6m?"#1d4ed8":"#7b9ab5",cursor:"pointer"}}>{sat6m?`6ay: ${sat6m}`:"6 Ay"}</button>
+            </>}
+            {cls.ambassador&&!ambassadorSent&&<button onClick={e=>{e.stopPropagation();setShowAmbassador(v=>!v);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #ddd6fe",background:"transparent",color:"#7c3aed",cursor:"pointer"}}>🌟 Elçi</button>}
+            {!confirm?<button onClick={e=>{e.stopPropagation();setConfirm(true);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",cursor:"pointer"}}>Sil</button>
+            :<button onClick={e=>{e.stopPropagation();onDelete(patient.id);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"none",background:"#ef4444",color:"white",fontWeight:500,cursor:"pointer"}}>Emin misin?</button>}
+          </div>
+          {/* ── Eski klinik detay kaldırıldı — v1 yalın panel ── */}
+          {false&&patient.question_times&&Object.keys(patient.question_times.questionTimes||{}).length>0&&(()=>{
             const qt=patient.question_times.questionTimes||{};
             const qc=patient.question_times.questionChanges||{};
             const slowQ=Object.entries(qt).filter(([,s])=>s>30);
@@ -1519,75 +1508,6 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
               })()}
 
             </div>
-            {/* Cross-sell badge */}
-            {crossSellDetected&&(
-              <div style={{padding:"6px 16px",background:"#f0fdf4",borderTop:"1px solid #a7f3d0",display:"flex",alignItems:"center",gap:8}}>
-                <div style={{fontSize:12,color:"#059669",fontWeight:500}}>↗ Cross-sell tespit edildi</div>
-                <div style={{fontSize:12,color:"#7b9ab5"}}>{outcomeProcedures.filter(p=>p!==formProc).join(", ")} eklendi</div>
-              </div>
-            )}
-            {/* Referral badge */}
-            {a.referralCode&&(
-              <div style={{padding:"6px 16px",background:"#f5f3ff",borderTop:"1px solid #ddd6fe",display:"flex",alignItems:"center",gap:6}}>
-                <div style={{fontSize:12,color:"#7c3aed",fontWeight:500}}>🔗 Referans kodu: {a.referralCode}</div>
-              </div>
-            )}
-
-            <div style={{borderTop:"1px solid #d4e1ef",padding:"10px 16px",display:"flex",gap:7,background:"#f8fafd"}}>
-              {/* Konsültasyona Başla — en öne */}
-              {onConsult&&(
-                <button onClick={e=>{e.stopPropagation();onConsult(patient);}} style={{flex:1,padding:"8px",borderRadius:7,fontSize:13,fontWeight:500,border:"none",background:"#1e3a5f",color:"#f8fafd",letterSpacing:"0.04em",cursor:"pointer"}}>
-                  ◈ Konsültasyon
-                </button>
-              )}
-              {/* PDF Brifing */}
-              <button onClick={handlePDF} title="Konsültasyon Brifing PDF" style={{padding:"8px 10px",borderRadius:7,fontSize:12,fontWeight:400,border:"1px solid #d4e1ef",background:"transparent",color:"#2d5a8e",flexShrink:0,cursor:"pointer"}}>
-                📄 PDF
-              </button>
-              {/* 1. Randevu sonucu */}
-              <button onClick={e=>{e.stopPropagation();setShowOutcome(v=>!v);}} style={{flex:1,padding:"8px",borderRadius:7,fontSize:12,fontWeight:400,border:`1px solid ${outcomeProcedures.length>0?"#059669":"#d4e1ef"}`,background:"transparent",color:outcomeProcedures.length>0?"#059669":"#7b9ab5"}}>
-                {outcomeProcedures.length>0?"✓ Randevu":"Randevu?"}
-              </button>
-              {/* 2. Ameliyat oldu mu */}
-              {outcomeProcedures.length>0&&(
-                <button onClick={e=>{e.stopPropagation();setShowProcedure(v=>!v);setShowSat1m(false);setShowSat6m(false);}}
-                  style={{padding:"8px 8px",borderRadius:7,fontSize:12,fontWeight:400,border:`1px solid ${hadProcedure===true?"#059669":hadProcedure===false?"#dc2626":"#d4e1ef"}`,background:"transparent",color:hadProcedure===true?"#059669":hadProcedure===false?"#dc2626":"#7b9ab5",flexShrink:0}}>
-                  {hadProcedure===true?"✓ Ameliyat":hadProcedure===false?"✗ Vazgeçti":"Ameliyat?"}
-                </button>
-              )}
-              {/* 3. 1 ay memnuniyet */}
-              {hadProcedure===true&&(
-                <button onClick={e=>{e.stopPropagation();setShowSat1m(v=>!v);setShowSat6m(false);setShowProcedure(false);}}
-                  style={{padding:"8px 8px",borderRadius:7,fontSize:12,fontWeight:400,border:`1px solid ${sat1m?"#059669":"#d4e1ef"}`,background:"transparent",color:sat1m?"#059669":"#7b9ab5",flexShrink:0}}>
-                  {sat1m?`1ay:${sat1m.charAt(0)}`:"1 Ay"}
-                </button>
-              )}
-              {/* 4. 6 ay memnuniyet */}
-              {hadProcedure===true&&(
-                <button onClick={e=>{e.stopPropagation();setShowSat6m(v=>!v);setShowSat1m(false);setShowProcedure(false);}}
-                  style={{padding:"8px 8px",borderRadius:7,fontSize:12,fontWeight:400,border:`1px solid ${sat6m?"#1d4ed8":"#d4e1ef"}`,background:"transparent",color:sat6m?"#1d4ed8":"#7b9ab5",flexShrink:0}}>
-                  {sat6m?`6ay:${sat6m.charAt(0)}`:"6 Ay"}
-                </button>
-              )}
-              {/* 5. Randevu Yok */}
-              {!noAppointment&&(
-                <button onClick={e=>{e.stopPropagation();markNoAppointment();}} style={{padding:"8px 8px",borderRadius:7,fontSize:12,fontWeight:400,border:"1px solid #fecaca",background:"transparent",color:"#dc2626",flexShrink:0}}>
-                  Gelmedi
-                </button>
-              )}
-              {cls.ambassador&&!ambassadorSent&&(
-                <button onClick={e=>{e.stopPropagation();setShowAmbassador(v=>!v);}} style={{flex:1,padding:"8px",borderRadius:7,fontSize:12,fontWeight:400,border:"1px solid #ddd6fe",background:"transparent",color:"#7c3aed"}}>🌟 Elçi</button>
-              )}
-              {cls.ambassador&&ambassadorSent&&(
-                <div style={{flex:1,padding:"8px",borderRadius:7,fontSize:12,textAlign:"center",background:"#f5f3ff",color:"#7c3aed",border:"1px solid #ddd6fe"}}>✓ Elçi</div>
-              )}
-              {!confirm
-                ?<button onClick={e=>{e.stopPropagation();setConfirm(true);}} style={{padding:"8px 12px",borderRadius:7,fontSize:13,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5"}}>Sil</button>
-                :<button onClick={e=>{e.stopPropagation();onDelete(patient.id);}} style={{padding:"8px 12px",borderRadius:7,fontSize:13,border:"none",background:"#ef4444",color:"white",fontWeight:500}}>Emin misin?</button>
-              }
-            </div>
-
-
 
             {/* SEKRETER MODALI */}
             {showOutcome&&(
