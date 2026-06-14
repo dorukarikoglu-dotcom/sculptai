@@ -505,7 +505,10 @@ function computeScoreWithModel(a, weights) {
 }
 
 
-function classify(score,a,threshold=V6B_THRESHOLD){
+function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
+  // bands={p33,p67} → persentil bantları (kliniğe göre), yoksa sabit threshold kullanır
+  const redLine=bands?bands.p67:threshold;
+  const amberLine=bands?bands.p33:Math.round(threshold*0.65);
   // Marka elçisi — yeni sorular + düşük risk
   // ML tabanlı elçi skoru
   const ambassadorProb = computeAmbassadorScore(a, score);
@@ -595,15 +598,14 @@ function classify(score,a,threshold=V6B_THRESHOLD){
   if(socialActive&&coreRiskFactors===0&&!bddRisk)
     return{cat:"ambassador",label:"Marka Elçisi",icon:"🌟",color:"#7c3aed",bg:"#faf5ff",border:"#ddd6fe",textColor:"#5b21b6",obs:"Randevuya hazır · Referans potansiyeli yüksek",obsBody:"Düşük risk, içsel motivasyon, aktif sosyal profil. Konsültasyon standart ilerleyebilir. Referans programını aktive edin.",ambassador:true};
 
-  // Kırmızı — v6b threshold veya ağır klinik sinyal
-  if(score>=threshold||coreRiskFactors>=3||bddRisk){
+  // Kırmızı — üst üçte bir veya ağır klinik sinyal
+  if(score>=redLine||coreRiskFactors>=3||bddRisk){
     const reason=buildReason();
     return{cat:"red",label:"Öncelikli Değerlendirme",icon:"🔴",color:"#dc2626",bg:"#fef2f2",border:"#fecaca",textColor:"#991b1b",obs:"Genişletilmiş konsültasyon önerilir",obsBody:reason,ambassador:false};
   }
 
-  // Amber — threshold altında ama sinyaller var
-  const amberThreshold=Math.round(threshold*0.65); // ~31 for threshold=48
-  if(score>=amberThreshold||coreRiskFactors>=2||(bddRisk)||(extMotiv&&highExp)){
+  // Amber — orta üçte bir
+  if(score>=amberLine||coreRiskFactors>=2||(bddRisk)||(extMotiv&&highExp)){
     const amberReasons=[];
     if(noRiskKnow||someRiskKnow) amberReasons.push("risk bilgisi eksik");
     if(unrealistic) amberReasons.push("kusursuz beklenti");
@@ -1010,7 +1012,7 @@ ${a.openStory ? `<div class="section"><div class="section-title">Hastanın Kendi
 }
 
 /* ─── PATIENT CARD ───────────────────────────────────────────────────────── */
-function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
+function PatientCard({patient,onDelete,isMobile,onConsult,mode,scoreBands}){
   const [open,setOpen]=useState(false);
   const [rendered,setRendered]=useState(false);
   const [cardError,setCardError]=useState(false);
@@ -1027,9 +1029,7 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
   const [showConsultNote,setShowConsultNote]=useState(false);
   const a=patient.answers||{};
   const score=patient.risk_score||0;
-  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||V6B_THRESHOLD;
-  const effectiveThreshold=getEffectiveThreshold(clinicThreshold, mode||'balanced');
-  const cls=classify(score,a,effectiveThreshold);
+  const cls=classify(score,a,scoreBands?.p67||V6B_THRESHOLD,scoreBands||null);
   const modelInfo=getActiveModelInfo(patient.doctor_id);
   const flags=getFlags(a,cls.cat);
   const signals=getSignals(a,cls.cat);
@@ -2658,14 +2658,20 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
 
   // Anlamlı KPI hesapları
   const total=patients.length;
-  const kritik=patients.filter(p=>{const c=classify(p.risk_score||0,p.answers||{});return c.cat==="red";}).length;
+  // Persentil bantları — kliniğin kendi skor dağılımından
+  const scoreBands=(()=>{
+    const scores=patients.map(p=>p.risk_score||0).sort((a,b)=>a-b);
+    if(scores.length<3) return {p33:V6B_THRESHOLD*0.65, p67:V6B_THRESHOLD}; // fallback
+    return {p33:scores[Math.floor(scores.length/3)], p67:scores[Math.floor(2*scores.length/3)]};
+  })();
+  const kritik=patients.filter(p=>{const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);return c.cat==="red";}).length;
   const randevuAlan=patients.filter(p=>p.outcome_procedures?.length>0).length;
   const donusum=total?Math.round(randevuAlan/total*100):0;
-  const elci=patients.filter(p=>classify(p.risk_score||0,p.answers||{}).ambassador).length;
+  const elci=patients.filter(p=>classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador).length;
   const crossSell=patients.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
 
   const displayed=(filter==="all"?patients:patients.filter(p=>{
-    const cls=classify(p.risk_score||0,p.answers||{});
+    const cls=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
     return cls.cat===filter;
   })).filter(p=>{
     if(!search.trim()) return true;
@@ -2673,8 +2679,8 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
     const a=p.answers||{};
     return (a.name||"").toLowerCase().includes(q)||(a.procedure||"").toLowerCase().includes(q);
   });
-  const clinical=displayed.filter(p=>!classify(p.risk_score||0,p.answers||{}).ambassador);
-  const ambassadors=displayed.filter(p=>classify(p.risk_score||0,p.answers||{}).ambassador);
+  const clinical=displayed.filter(p=>!classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador);
+  const ambassadors=displayed.filter(p=>classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador);
 
   return(
     <div style={{display:"flex",flexDirection:isMobile?"column":"row",height:"100vh",overflow:"hidden",fontFamily:"'Nunito',sans-serif"}}>
@@ -2817,7 +2823,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           {search.trim()&&(
             <div style={{fontSize:12,color:"#7b9ab5",marginBottom:8}}>"{search}" için {displayed.length} sonuç</div>
           )}
-          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode}/>)}</div>
+          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode} scoreBands={scoreBands}/>)}</div>
 
           {ambassadors.length>0&&(
             <div className="f5">
@@ -2826,7 +2832,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
                 <div style={{fontSize:12,color:"#a78bfa",background:"#faf5ff",padding:"2px 10px",borderRadius:10,border:"1px solid #ede9fe",letterSpacing:"0.08em",fontWeight:500}}>Ticari Fırsat</div>
                 <div style={{flex:1,height:1,background:"#f1f3f5"}}/>
               </div>
-              {ambassadors.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode}/>)}
+              {ambassadors.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} onConsult={setConsultPatient} mode={thresholdMode} scoreBands={scoreBands}/>)}
             </div>
           )}
 
