@@ -705,6 +705,7 @@ function predictOutcomes(score, a){
 const QUESTIONS=[
   {id:"name",section:"Kişisel Bilgiler",label:"İsminiz ve Soyisminiz",type:"text",placeholder:"Ad Soyad",core:true},
   {id:"age",section:"Kişisel Bilgiler",label:"Kaç yaşındasınız?",type:"number",placeholder:"örn. 34",core:true},
+  {id:"source",section:"Kişisel Bilgiler",label:"Bize nasıl ulaştınız?",type:"radio",options:["Instagram","Google / arama","Hasta tavsiyesi","Doktor / klinik tavsiyesi","Diğer sosyal medya (TikTok/YouTube)","Diğer"],core:true},
   {id:"gender",section:"Kişisel Bilgiler",label:"Cinsiyetiniz nedir?",type:"radio",options:["Kadın","Erkek","Belirtmek istemiyorum"]},
   {id:"procedure",section:"İşlem Bilgisi",label:"Hangi işlemi yaptırmak istiyorsunuz?",type:"radio",options:["Meme Küçültme","Meme Büyütme (Silikon Protez ile)","Meme Dikleştirme","Meme Asimetrisinin Giderilmesi","Meme Onarımı (Kanser sonrası)","Doğumsal Meme Anomalisinin Düzeltilmesi","Jinekomasti","Burun Estetiği","Yüz Germe","Kaş Kaldırma","Üst Göz Kapağı Estetiği","Alt Göz Kapağı Estetiği","Yanak Estetiği (Bişektomi)","Kepçe Kulak Tedavisi","Yüz Yağ Enjeksiyonu","Botoks Uygulaması","Dolgu Uygulaması","Göz Altı Işık Dolgusu","Nano Yağ Enjeksiyonu","Mezoterapi","Karın Germe","Liposuction","Uyluk veya Kol germe","Popo estetiği","Genital Estetik","Labioplasti","Lazer Epilasyon","Lazer Dövme Silme","Cilt Yenileme (Rejuvenasyon)","Karbon Peeling","Lazer Leke Tedavisi","Lazer Saç Tedavisi"],core:true},
 
@@ -715,7 +716,6 @@ const QUESTIONS=[
   {id:"rhinoVision",section:"İşlem Bilgisi",label:"Ameliyat sonucunu hayal ettiğinizde aklınızda ne var?",type:"radio",showIf:(a)=>a.procedure==="Burun Estetiği",options:["Doktorum benim yüz yapıma en uygun olanı belirlesin","Burnumda beni rahatsız eden belirli bir şeyi düzeltmek istiyorum","Aklımda net bir görünüm var, buna ulaşmak istiyorum","Aklımda belirli bir referans var — bir ünlü veya fotoğraf"]},
 
   {id:"breastSymmetry",section:"İşlem Bilgisi",label:"Şu an iki memeniz arasındaki farkı nasıl tarif edersiniz?",type:"radio",showIf:(a)=>["Meme Küçültme","Meme Dikleştirme","Meme Büyütme (Silikon Protez ile)","Meme Asimetrisinin Giderilmesi"].includes(a.procedure),options:["Fark var ama beni pek rahatsız etmiyor, ameliyatla düzelsin istiyorum","Belirgin bir fark var ve bu beni çok rahatsız ediyor","Çok küçük bir fark var ama bu küçük fark bile beni rahatsız ediyor","Fark olduğunu düşünmüyorum, sadece küçültmek/büyütmek istiyorum"]},
-  {id:"source",section:"İşlem Bilgisi",label:"Bize nereden ulaştınız?",type:"radio",options:["Instagram","Google Arama","Arkadaş / Tanıdık Tavsiyesi","TikTok","YouTube","Doktor Yönlendirmesi","Diğer"]},
   {id:"motivation",section:"Motivasyon & Beklenti",label:"Bu kararı almanızda en belirleyici olan nedir?",type:"radio",options:["Kendim için daha iyi hissetmek istiyorum","Özgüvenimi artırmak istiyorum","Yakınlarımın yorumları etkili oldu","Hayatımın daha iyi gideceğini düşünüyorum"]},
   {id:"expectation",section:"Motivasyon & Beklenti",label:"İşlem sonucunda nasıl bir değişim bekliyorsunuz?",type:"radio",options:["Küçük, doğal bir iyileştirme yeterli","Dengeli ve orantılı bir sonuç bekliyorum","Belirgin bir fark olmasını istiyorum","Tamamen farklı bir görünüm istiyorum"]},
   {id:"bddScreen",section:"Motivasyon & Beklenti",label:"Görünümünüzle ilgili düşünceleriniz günlük yaşamınızı nasıl etkiliyor?",type:"radio",options:["Pek etkilemiyor, bazen düşünüyorum","Sıkça düşünüyorum ama hayatımı yönlendirmiyor","Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor","Tamamen ele geçirdi, kaçınma davranışlarım var"]},
@@ -3751,8 +3751,8 @@ function PatientForm({doctorId}){
         "Sıkça düşünüyorum ama hayatımı yönlendirmiyor":"I think about it often but it doesn't control my life",
         "Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor":"I think about it for hours daily, it affects my social life",
         "Tamamen ele geçirdi, kaçınma davranışlarım var":"It has completely taken over, I have avoidance behaviors"}},
-      source:{label:"How did you find us?",options:{
-        "Instagram":"Instagram","Google Arama":"Google Search","Arkadaş / Tanıdık Tavsiyesi":"Friend / Referral","TikTok":"TikTok","YouTube":"YouTube","Doktor Yönlendirmesi":"Doctor Referral","Diğer":"Other"}},
+      source:{label:"How did you hear about us?",options:{
+        "Instagram":"Instagram","Google / arama":"Google / search","Hasta tavsiyesi":"Patient referral","Doktor / klinik tavsiyesi":"Doctor / clinic referral","Diğer sosyal medya (TikTok/YouTube)":"Other social media (TikTok/YouTube)","Diğer":"Other"}},
       motivation:{label:"What is your primary motivation for this procedure?",options:{
         "Kendim için daha iyi hissetmek istiyorum":"I want to feel better about myself",
         "Özgüvenimi artırmak istiyorum":"I want to boost my self-confidence",
