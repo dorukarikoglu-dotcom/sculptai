@@ -363,64 +363,6 @@ function computeMLScore(a) {
 
 
 /* ─── ELÇİ ML MODELİ ────────────────────────────────────────────────────── */
-const AMBASSADOR_WEIGHTS = {
-  intercept: -2.4879774705640325,
-  coef: {
-    sharing:    1.7456693036553208,
-    social:     0.23462709374771243,
-    recommends: 0.4055491101140394,
-    motivation: -0.4139539651161969,
-    support:    0.22992151735834254,
-    low_risk:   0.9136872112774931,
-    age:        -0.1731016285821571,
-  },
-  mean: [0.31739130434782625, 0.5391304347826089, 0.8478260869565217, 0.5434782608695652, 0.8521739130434781, 0.6245652173913042, 0.44157608695652173],
-  std:  [0.29177444223539684, 0.30106929786546194, 0.2525858704048316, 0.15414867740205082, 0.3097959569969316, 0.2349440869814804, 0.2445673141348659],
-};
-
-function computeAmbassadorScore(a, riskScore){
-  const sharing = {
-    "Evet, açıkça paylaşırım":1.0,"Sık paylaşırım":0.85,"Evet paylaşırım":0.7,
-    "Ara sıra":0.4,"Sadece yakın çevrem ile paylaşırım":0.3,
-    "Sadece çok yakınlarımla":0.2,"Genelde paylaşmam":0.0,
-  }[a.sharing] ?? 0.3;
-
-  const social = {
-    "Sık sık danışırlar":1.0,"Evet, sık sık danışırlar":1.0,
-    "Bazen danışanlar olur":0.6,"Bazen":0.6,
-    "Hayır":0.0,"Hayır, danışmazlar":0.0,
-  }[a.socialInfluence] ?? 0.3;
-
-  const recommends = {"Evet, sık öneririm":1.0,"Bazen":0.5,"Önermem":0.0}[a.recommends] ?? 0.5;
-
-  const motivation = {
-    "Kendim için daha iyi hissetmek istiyorum":1.0,
-    "Özgüvenimi artırmak istiyorum":0.9,
-    "Sosyal özgüvenimi artırmak istiyorum":0.8,
-    "Görünümümü iyileştirmek istiyorum":0.5,
-    "Başka insanların yorumları beni kötü etkiliyor":0.0,
-    "Yakınlarımın yorumları etkili oldu":0.0,
-  }[a.motivation] ?? 0.5;
-
-  const support = {
-    "Evet, destekliyorlar":1.0,"Evet":1.0,"Kararsızlar":0.4,
-    "Biliyorlar ama kararsızlar":0.3,"Bu işleme karşılar":0.0,"Kimseye söylemedim":0.0,
-  }[a.support] ?? 0.5;
-
-  const low_risk = 1 - (riskScore / 100);
-  const age_norm = Math.min(1, Math.max(0, ((parseInt(a.age)||35) - 17) / 48));
-
-  const feats  = [sharing, social, recommends, motivation, support, low_risk, age_norm];
-  const coefs  = Object.values(AMBASSADOR_WEIGHTS.coef);
-  const means  = AMBASSADOR_WEIGHTS.mean;
-  const stds   = AMBASSADOR_WEIGHTS.std;
-
-  let logit = AMBASSADOR_WEIGHTS.intercept;
-  feats.forEach((v, i) => {
-    logit += coefs[i] * (v - means[i]) / (stds[i] || 1);
-  });
-  return 1 / (1 + Math.exp(-logit));
-}
 
 /* ─── KLİNİK BAZLI MODEL ────────────────────────────────────────────────── */
 /* ─── KLİNİK MODEL CACHE — localStorage + versiyon bazlı invalidation ─── */
@@ -511,12 +453,6 @@ function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
   const amberLine=bands?bands.p33:Math.round(threshold*0.65);
   // Marka elçisi — yeni sorular + düşük risk
   // ML tabanlı elçi skoru
-  const ambassadorProb = computeAmbassadorScore(a, score);
-  const sharesFreely=a.sharing==="Evet, açıkça paylaşırım";
-  const socialInfluencer=a.socialInfluence==="Sık sık danışırlar"||a.socialInfluence==="Evet, sık sık danışırlar";
-  const intMotiv=["Kendim için daha iyi hissetmek istiyorum","Özgüvenimi artırmak istiyorum"].some(x=>a.motivation===x);
-  const hasSupport=a.support==="Evet, destekliyorlar"||a.support==="Evet";
-  const socialActive=ambassadorProb>=0.82&&score<35;
 
   // Risk sinyalleri
   const bddRisk=a.bddScreen==="Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor"||a.bddScreen==="Tamamen ele geçirdi, kaçınma davranışlarım var"||a.bodyFocus==="Neredeyse her gün, bazen işimi gücümü etkiliyor"||a.avoidance==="Günlük hayatımı önemli ölçüde kısıtlıyor";
@@ -594,14 +530,10 @@ function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
   // v6b çekirdek risk faktör sayısı (skora giren 4 feature'dan)
   const coreRiskFactors=[noRiskKnow, unrealistic, prevBad, highProcRisk].filter(Boolean).length;
 
-  // Elçi
-  if(socialActive&&coreRiskFactors===0&&!bddRisk)
-    return{cat:"ambassador",label:"Marka Elçisi",icon:"🌟",color:"#7c3aed",bg:"#faf5ff",border:"#ddd6fe",textColor:"#5b21b6",obs:"Randevuya hazır · Referans potansiyeli yüksek",obsBody:"Düşük risk, içsel motivasyon, aktif sosyal profil. Konsültasyon standart ilerleyebilir. Referans programını aktive edin.",ambassador:true};
-
   // Kırmızı — üst üçte bir veya ağır klinik sinyal
   if(score>=redLine||coreRiskFactors>=3||bddRisk){
     const reason=buildReason();
-    return{cat:"red",label:"Öncelikli Değerlendirme",icon:"🔴",color:"#dc2626",bg:"#fef2f2",border:"#fecaca",textColor:"#991b1b",obs:"Genişletilmiş konsültasyon önerilir",obsBody:reason,ambassador:false};
+    return{cat:"red",label:"Öncelikli Değerlendirme",icon:"🔴",color:"#dc2626",bg:"#fef2f2",border:"#fecaca",textColor:"#991b1b",obs:"Genişletilmiş konsültasyon önerilir",obsBody:reason};
   }
 
   // Amber — orta üçte bir
@@ -613,11 +545,11 @@ function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
     if(highProcRisk) amberReasons.push("karmaşık prosedür");
     if(extMotiv) amberReasons.push("dışsal motivasyon");
     const amberStr=amberReasons.length>0?`${amberReasons.join(", ")} sinyali var. Konsültasyonda bu konuları açın.`:"Bazı sinyaller dikkat gerektiriyor — beklenti ve süreci konuşun.";
-    return{cat:"amber",label:"Dikkatli Değerlendir",icon:"🟡",color:"#d97706",bg:"#fffbeb",border:"#fde68a",textColor:"#92400e",obs:"Bazı sinyaller dikkat gerektiriyor",obsBody:amberStr,ambassador:false};
+    return{cat:"amber",label:"Dikkatli Değerlendir",icon:"🟡",color:"#d97706",bg:"#fffbeb",border:"#fde68a",textColor:"#92400e",obs:"Bazı sinyaller dikkat gerektiriyor",obsBody:amberStr};
   }
 
   // Yeşil
-  return{cat:"green",label:"Randevuya Hazır",icon:"🟢",color:"#059669",bg:"#ecfdf5",border:"#a7f3d0",textColor:"#047857",obs:"Profil uygun görünüyor",obsBody:"Gerçekçi beklenti ve süreç farkındalığı saptandı. Standart konsültasyon yeterli.",ambassador:false};
+  return{cat:"green",label:"Randevuya Hazır",icon:"🟢",color:"#059669",bg:"#ecfdf5",border:"#a7f3d0",textColor:"#047857",obs:"Profil uygun görünüyor",obsBody:"Gerçekçi beklenti ve süreç farkındalığı saptandı. Standart konsültasyon yeterli."};
 }
 
 function predictOutcomes(score, a){
@@ -733,9 +665,6 @@ const QUESTIONS=[
 
 
   /* ── Açık Uçlu ── */
-  /* ── Marka Elçisi Sinyalleri ── */
-  {id:"sharing",section:"Hasta Profili",label:"Memnun kaldığınız bir deneyimi çevrenizle paylaşır mısınız?",type:"radio",options:["Evet, açıkça paylaşırım","Sadece çok yakınlarımla","Hayır, paylaşmam"]},
-
   {id:"phone",section:"İletişim",label:"Telefon numaranız (randevu için)",type:"text",placeholder:"05XX XXX XX XX",optional:true},
   {id:"openStory",section:"Size Bir Sorum Var",label:"Bu işlemden sonra hayatınızda ne değişmesini istiyorsunuz? Kendi cümlelerinizle anlatır mısınız.",type:"text",placeholder:"İstediğiniz kadar az veya çok yazabilirsiniz...",optional:true},
 ];
@@ -749,13 +678,10 @@ function getFlags(a,cat){
 
   if(["Bu işleme karşılar","Kimseye söylemedim"].includes(a.support)) flags.push("Sosyal destek belirsiz");
   if(a.revision==="Kusursuz sonuç bekliyorum") flags.push("Kusursuz sonuç beklentisi");
-  if(cat==="green"||cat==="ambassador"){
+  if(cat==="green"){
     if(a.motivation==="Görünümümü iyileştirmek istiyorum") flags.push("İçsel motivasyon");
     if(["Doğal ve dengeli bir sonuç bekliyorum","Küçük iyileştirmeler yeterli"].includes(a.expectation)) flags.push("Gerçekçi beklentiler");
     if(a.support==="Evet") flags.push("Ailesi destekliyor");
-  }
-  if(cat==="ambassador"){
-
   }
   return flags.slice(0,2);
 }
@@ -774,11 +700,6 @@ function getSignals(a,cat){
     {label:"Motivasyon",val:mot},
     {label:"Beklenti",val:exp},
     {label:"Danıştığı Doktor",val:doc},
-  ];
-  if(cat==="ambassador") return [
-    {label:"Paylaşım Eğilimi",val:a.sharing||"—"},
-    {label:"Çevresel Etki",val:a.socialInfluence||"—"},
-    {label:"Ek İşlem İlgisi",val:a.otherConsidered||"—"},
   ];
   return [
     {label:"Motivasyon",val:mot},
@@ -909,8 +830,8 @@ function generateConsultPDF(patient, cls, pred, risks, comms, signals, modelInfo
   const score = patient.risk_score || 0;
   const date = patient.created_at ? new Date(patient.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric"}) : "";
   const name = a.name || "İsimsiz Hasta";
-  const catColors = {red:"#dc2626",amber:"#d97706",green:"#059669",ambassador:"#7c3aed"};
-  const catBgs = {red:"#fef2f2",amber:"#fffbeb",green:"#ecfdf5",ambassador:"#faf5ff"};
+  const catColors = {red:"#dc2626",amber:"#d97706",green:"#059669"};
+  const catBgs = {red:"#fef2f2",amber:"#fffbeb",green:"#ecfdf5"};
 
   const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
 <title>SculptAI — ${name}</title>
@@ -1018,13 +939,11 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
   const [cardError,setCardError]=useState(false);
   const [confirm,setConfirm]=useState(false);
   const [showOutcome,setShowOutcome]=useState(false);
-  const [showAmbassador,setShowAmbassador]=useState(false);
   const [outcomeProcedures,setOutcomeProcedures]=useState(patient.outcome_procedures||[]);
   const [noAppointment,setNoAppointment]=useState(patient.no_appointment||false);
   const [hadProcedure,setHadProcedure]=useState(patient.had_procedure??null);
   const [procedureDate,setProcedureDate]=useState(patient.procedure_date||"");
   const [showProcedure,setShowProcedure]=useState(false);
-  const [ambassadorSent,setAmbassadorSent]=useState(patient.ambassador_sent||false);
   const [consultNote,setConsultNote]=useState(patient.consult_note||"");
   const [showConsultNote,setShowConsultNote]=useState(false);
   const a=patient.answers||{};
@@ -1125,15 +1044,6 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
     }
   }
 
-  async function sendAmbassador(){
-    try{
-      const code="REF-"+Math.random().toString(36).substr(2,4).toUpperCase();
-      await sb.from("patients").update({ambassador_sent:true,ambassador_code:code}).eq("id",patient.id);
-      setAmbassadorSent(true);
-      setShowAmbassador(false);
-      alert(`Referans kodu: ${code}\nBu kodu hastaya paylaşın.`);
-    }catch{alert("İşlem gerçekleştirilemedi.");}
-  }
 
   function handlePDF(e){
     e.stopPropagation();
@@ -1209,7 +1119,7 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
   if(highProcRisk_c) nba.push({icon:"⭐",txt:"Uzmanlık vurgula — karmaşık prosedür, doktorun deneyimini ön plana çıkar"});
   if(nba.length===0) nba.push({icon:"✓",txt:"Standart takip — belirgin engel yok"});
 
-  const approachLabel=cls.cat==="red"?"Dikkatli yaklaş":cls.cat==="amber"?"Orta":cls.cat==="ambassador"?"VIP":"Yüksek potansiyel";
+  const approachLabel=cls.cat==="red"?"Dikkatli yaklaş":cls.cat==="amber"?"Orta":"Yüksek potansiyel";
   const approachColor=cls.cat==="red"?"#dc2626":cls.cat==="amber"?"#d97706":"#059669";
   const approachBg=cls.cat==="red"?"#fef2f2":cls.cat==="amber"?"#fffbeb":"#ecfdf5";
   const approachBorder=cls.cat==="red"?"#fecaca":cls.cat==="amber"?"#fde68a":"#a7f3d0";
@@ -1222,10 +1132,6 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
       <div style={{display:"flex",alignItems:"center",gap:8,padding:"10px 12px",minWidth:0,overflow:"hidden"}}>
         {/* Approach accent */}
         <div style={{width:3,height:40,borderRadius:2,background:approachColor,flexShrink:0}}/>
-        {/* Approach badge */}
-        <div style={{padding:"3px 8px",borderRadius:20,background:approachBg,border:`1px solid ${approachBorder}`,flexShrink:0}}>
-          <div style={{fontSize:9,fontWeight:600,textTransform:"uppercase",color:approachColor,whiteSpace:"nowrap",letterSpacing:"0.04em"}}>{approachLabel}</div>
-        </div>
         {/* Name + procedure + source */}
         <div style={{flex:1,minWidth:0,overflow:"hidden"}}>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:400,color:"#1e3a5f",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.name||"İsimsiz"}</div>
@@ -1291,7 +1197,6 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
           {/* Detay butonları */}
           <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #d4e1ef",padding:"10px 16px",display:"flex",gap:7,background:"#f8fafd",flexWrap:"wrap"}}>
             <button onClick={handlePDF} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#2d5a8e",cursor:"pointer"}}>📄 PDF</button>
-            {cls.ambassador&&!ambassadorSent&&<button onClick={e=>{e.stopPropagation();setShowAmbassador(v=>!v);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #ddd6fe",background:"transparent",color:"#7c3aed",cursor:"pointer"}}>🌟 Elçi</button>}
             {!confirm?<button onClick={e=>{e.stopPropagation();setConfirm(true);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",cursor:"pointer"}}>Sil</button>
             :<button onClick={e=>{e.stopPropagation();onDelete(patient.id);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"none",background:"#ef4444",color:"white",fontWeight:500,cursor:"pointer"}}>Emin misin?</button>}
           </div>
@@ -1347,23 +1252,6 @@ function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
               </div>
             )}
 
-            {/* MARKA ELÇİSİ MODALI */}
-            {showAmbassador&&(
-              <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #ddd6fe",padding:"16px",background:"#faf5ff"}}>
-                <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#7c3aed",marginBottom:10}}>Marka Elçisi Paketi</div>
-                <div style={{fontSize:13,color:"#5b21b6",marginBottom:12,lineHeight:1.6}}>
-                  <strong>{a.name}</strong> marka elçisi profiline sahip. Referans kodu oluşturulacak ve hastaya iletilecek.
-                </div>
-                <div style={{background:"#ede9fe",border:"1px solid #ddd6fe",borderRadius:8,padding:"10px 12px",marginBottom:14}}>
-                  <div style={{fontSize:12,color:"#7c3aed",marginBottom:5,fontWeight:500}}>Pakete dahil:</div>
-                  <div style={{fontSize:13,color:"#5b21b6",lineHeight:1.7}}>✓ Kişisel referans kodu<br/>✓ Getirdiği her hasta için klinik avantajı<br/>✓ VIP konsültasyon önceliği</div>
-                </div>
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={sendAmbassador} style={{padding:"9px 20px",background:"#7c3aed",border:"none",borderRadius:7,color:"white",fontSize:13,fontWeight:500,cursor:"pointer"}}>Kodu Oluştur ve Gönder</button>
-                  <button onClick={()=>setShowAmbassador(false)} style={{padding:"9px 14px",background:"transparent",border:"1px solid #ddd6fe",borderRadius:7,color:"#7c3aed",fontSize:13,cursor:"pointer"}}>İptal</button>
-                </div>
-              </div>
-            )}
         </div>
       )}
     </div>
@@ -1375,7 +1263,6 @@ function ValueScreen({patients,doctor}){
   const total=patients.length;
   const crossSells=patients.filter(p=>p.outcome_procedures&&p.outcome_procedures.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
   const noAppt=patients.filter(p=>p.no_appointment).length;
-  const ambassadors=patients.filter(p=>p.ambassador_code&&p.ambassador_code!=="").length;
   const withOutcome=patients.filter(p=>p.outcome_procedures?.length>0).length;
   const donusum=total?Math.round(withOutcome/total*100):0;
   const C={border:"#d4e1ef",muted:"#7b9ab5"};
@@ -1415,17 +1302,6 @@ function ValueScreen({patients,doctor}){
           ))}
         </div>
       )}
-      <div style={cardS}>
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:C.muted,marginBottom:10,fontWeight:500}}>Marka Elçisi Programı</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:8}}>
-          {[["Aktif Elçi",ambassadors],["Kod Gönderildi",patients.filter(p=>p.ambassador_sent).length],["Referansla Gelen",patients.filter(p=>p.answers?.referralCode).length]].map(([lbl,val])=>(
-            <div key={lbl} style={{background:"#f8fafd",borderRadius:8,padding:"12px 14px",textAlign:"center"}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:300,fontVariantNumeric:"lining-nums",color:"#7c3aed",lineHeight:1,marginBottom:3}}>{val}</div>
-              <div style={{fontSize:11,color:C.muted}}>{lbl}</div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
@@ -1784,13 +1660,13 @@ function Analytics({patients,avgRevenue=40000}){
 
   // Segment — classify() ile tutarlı, scoreBands ile
   const scoreBands={p33:50,p67:60};
-  const segCounts={red:0,amber:0,green:0,ambassador:0};
+  const segCounts={red:0,amber:0,green:0};
   patients.forEach(p=>{
     const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
     segCounts[c.cat]=(segCounts[c.cat]||0)+1;
   });
-  const red=segCounts.red, amber=segCounts.amber, green=segCounts.green, amb=segCounts.ambassador;
-  const highPotRate=total?Math.round((green+amb)/total*100):0;
+  const red=segCounts.red, amber=segCounts.amber, green=segCounts.green;
+  const highPotRate=total?Math.round(green/total*100):0;
 
   // Outcome metrikleri
   const labeled=patients.filter(p=>p.no_appointment===true||p.outcome_procedures?.length>0||p.had_procedure===true);
@@ -1870,7 +1746,6 @@ function Analytics({patients,avgRevenue=40000}){
             {label:"🟢 Yüksek potansiyel",count:green,color:"#10b981"},
             {label:"🟡 Orta",count:amber,color:"#f59e0b"},
             {label:"🔴 Dikkatli yaklaş",count:red,color:"#ef4444"},
-            {label:"🌟 VIP / Elçi",count:amb,color:"#8b5cf6"},
           ].map(s=>(
             <div key={s.label} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
               <div style={{fontSize:13,color:"#2d5a8e",width:140,flexShrink:0}}>{s.label}</div>
@@ -1882,7 +1757,7 @@ function Analytics({patients,avgRevenue=40000}){
             </div>
           ))}
           <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden",marginTop:8}}>
-            {[{c:"#10b981",n:green},{c:"#f59e0b",n:amber},{c:"#ef4444",n:red},{c:"#8b5cf6",n:amb}].map((s,i)=>(
+            {[{c:"#10b981",n:green},{c:"#f59e0b",n:amber},{c:"#ef4444",n:red}].map((s,i)=>(
               <div key={i} style={{flex:s.n,background:s.c,minWidth:s.n?2:0}}/>
             ))}
           </div>
@@ -1950,7 +1825,7 @@ function Analytics({patients,avgRevenue=40000}){
 
       {/* DOĞRULAMA TABLOSU — sadece yeterli outcome varsa */}
       {labeled.length>=OUTCOME_THRESHOLD&&(()=>{
-        const segData={red:{total:0,noShow:0,came:0},amber:{total:0,noShow:0,came:0},green:{total:0,noShow:0,came:0},ambassador:{total:0,noShow:0,came:0}};
+        const segData={red:{total:0,noShow:0,came:0},amber:{total:0,noShow:0,came:0},green:{total:0,noShow:0,came:0}};
         labeled.forEach(p=>{
           const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
           const seg=segData[c.cat]||segData.green;
@@ -1959,8 +1834,8 @@ function Analytics({patients,avgRevenue=40000}){
           else seg.came++;
         });
 
-        const segColors={red:"#dc2626",amber:"#d97706",green:"#059669",ambassador:"#7c3aed"};
-        const segLabels={red:"🔴 Dikkatli yaklaş",amber:"🟡 Orta",green:"🟢 Yüksek potansiyel",ambassador:"🌟 VIP"};
+        const segColors={red:"#dc2626",amber:"#d97706",green:"#059669"};
+        const segLabels={red:"🔴 Dikkatli yaklaş",amber:"🟡 Orta",green:"🟢 Yüksek potansiyel"};
 
         return(
           <div style={card()}>
@@ -1972,7 +1847,7 @@ function Analytics({patients,avgRevenue=40000}){
               <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",background:"#eef3f9",minWidth:400,padding:"8px 12px",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.muted,fontWeight:600}}>
                 <div>Segment</div><div style={{textAlign:"center"}}>Toplam</div><div style={{textAlign:"center"}}>Dönüştü</div><div style={{textAlign:"center"}}>Kayıp</div><div style={{textAlign:"center"}}>Dönüşüm</div>
               </div>
-              {["green","ambassador","amber","red"].map(seg=>{
+              {["green","amber","red"].map(seg=>{
                 const d=segData[seg];
                 if(d.total===0) return null;
                 const rate=d.total>0?Math.round(d.came/d.total*100):0;
@@ -2111,7 +1986,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
   const kritik=patients.filter(p=>{const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);return c.cat==="red";}).length;
   const randevuAlan=patients.filter(p=>p.outcome_procedures?.length>0).length;
   const donusum=total?Math.round(randevuAlan/total*100):0;
-  const elci=patients.filter(p=>classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador).length;
   const crossSell=patients.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
 
   const displayed=(filter==="all"?patients:patients.filter(p=>{
@@ -2123,8 +1997,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
     const a=p.answers||{};
     return (a.name||"").toLowerCase().includes(q)||(a.procedure||"").toLowerCase().includes(q);
   });
-  const clinical=displayed.filter(p=>!classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador);
-  const ambassadors=displayed.filter(p=>classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands).ambassador);
+  const clinical=displayed;
 
   return(
     <div style={{display:"flex",flexDirection:isMobile?"column":"row",height:"100vh",overflow:"hidden",fontFamily:"'Nunito',sans-serif"}}>
@@ -2208,7 +2081,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           {/* KPI */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:isMobile?8:12,marginBottom:isMobile?16:24}} className="f2">
             {[
-              {val:total,label:"Toplam Hasta",note:elci>0?`${elci} marka elçisi`:"Tüm kayıtlar",color:"#1e3a5f",accent:"#1d4ed8"},
+              {val:total,label:"Toplam Lead",note:"Tüm kayıtlar",color:"#1e3a5f",accent:"#1d4ed8"},
               {val:randevuAlan>0?`%${donusum}`:"—",label:"Dönüşüm",note:randevuAlan>0?`${randevuAlan}/${total} randevu`:"Henüz outcome yok",color:donusum>=60?"#059669":donusum>=40?"#d97706":"#7b9ab5",accent:donusum>=60?"#059669":donusum>=40?"#d97706":"#7b9ab5"},
               {val:kritik,label:"Kritik Profil",note:kritik>0?`%${Math.round(kritik/total*100||0)} oranında`:"Belirgin risk yok",color:kritik>0?"#dc2626":"#059669",accent:kritik>0?"#dc2626":"#059669"},
             ].map(k=>(
@@ -2235,7 +2108,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
               {!isMobile&&<button onClick={()=>exportCSV(patients)} style={{padding:"4px 10px",borderRadius:20,fontSize:11,border:"1px solid #d4e1ef",background:"#eef3f9",color:"#2563eb",flexShrink:0,cursor:"pointer"}}>📊 CSV</button>}
             </div>
             <div style={{display:"flex",gap:5,alignItems:"center",overflowX:"auto",WebkitOverflowScrolling:"touch",paddingBottom:2}}>
-              {[["all","Tümü"],["red","🔴 Dikkat"],["amber","🟡 Değerlendirme"],["green","🟢 Uygun"],["ambassador","🌟 Elçi"]].map(([v,l])=>(
+              {[["all","Tümü"],["red","🔴 Dikkat"],["amber","🟡 Orta"],["green","🟢 Uygun"]].map(([v,l])=>(
                 <button key={v} onClick={()=>setFilter(v)} style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:500,border:`1.5px solid ${filter===v?"#1e3a5f":"#d4e1ef"}`,background:filter===v?"#1e3a5f":"#f8fafd",color:filter===v?"#f8fafd":"#7b9ab5",transition:"all 0.15s",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
               ))}
               {isMobile&&<button onClick={()=>exportCSV(patients)} style={{padding:"4px 10px",borderRadius:20,fontSize:11,border:"1px solid #d4e1ef",background:"#eef3f9",color:"#2563eb",flexShrink:0,whiteSpace:"nowrap",cursor:"pointer"}}>CSV</button>}
@@ -2254,7 +2127,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
 
           {loading&&<div style={{textAlign:"center",padding:"40px",color:"#7b9ab5"}}>Yükleniyor...</div>}
 
-          {!loading&&clinical.length===0&&ambassadors.length===0&&(
+          {!loading&&clinical.length===0&&(
             <div style={{textAlign:"center",padding:"60px 20px",color:"#7b9ab5"}}>
               <div style={{fontSize:40,marginBottom:14}}>📋</div>
               <div style={{fontSize:16,color:"#2d5a8e",marginBottom:8}}>Henüz kayıt yok</div>
@@ -2267,16 +2140,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           )}
           <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} mode={thresholdMode} scoreBands={scoreBands}/>)}</div>
 
-          {ambassadors.length>0&&(
-            <div className="f5">
-              <div style={{display:"flex",alignItems:"center",gap:10,margin:"18px 0 12px"}}>
-                <div style={{flex:1,height:1,background:"#f1f3f5"}}/>
-                <div style={{fontSize:12,color:"#a78bfa",background:"#faf5ff",padding:"2px 10px",borderRadius:10,border:"1px solid #ede9fe",letterSpacing:"0.08em",fontWeight:500}}>Ticari Fırsat</div>
-                <div style={{flex:1,height:1,background:"#f1f3f5"}}/>
-              </div>
-              {ambassadors.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} mode={thresholdMode} scoreBands={scoreBands}/>)}
-            </div>
-          )}
 
           {patients.length>0&&(
             <div style={{marginTop:20,textAlign:"center"}}>
@@ -3615,7 +3478,6 @@ KİŞİ HAKKINDA BİLDİKLERİN:
 - Risk segmenti: ${cls.cat} (${cls.label})
 
 SEGMENT'E GÖRE ODAK:
-${cls.cat==="ambassador"?"Bu kişi marka elçisi adayı — düşük risk, pozitif profil. Güven ver, konsültasyona heyecanla gitsin. Referans programından bahset.":""}
 ${cls.cat==="green"?"Bu kişi randevuya hazır ama henüz net karar vermemiş olabilir. 'Doğru adımı atıyorsunuz' mesajı ver. Randevuyu somutlaştır.":""}
 ${cls.cat==="amber"?"Bu kişi kararsız ya da bazı endişeleri var. Güvence ver, endişelerini normalize et, ama gerçekçi ol.":""}
 ${cls.cat==="red"?"Bu kişide yüksek risk var. Sakin, güven verici ama beklenti yönetici bir ton. Performatif heyecan yok.":""}
