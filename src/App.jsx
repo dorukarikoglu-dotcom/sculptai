@@ -1782,24 +1782,22 @@ function Analytics({patients,avgRevenue=40000}){
     </div>
   );
 
-  // Segment — classify() ile tutarlı
+  // Segment — classify() ile tutarlı, scoreBands ile
+  const scoreBands={p33:50,p67:60};
   const segCounts={red:0,amber:0,green:0,ambassador:0};
   patients.forEach(p=>{
-    const c=classify(p.risk_score||0,p.answers||{});
+    const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
     segCounts[c.cat]=(segCounts[c.cat]||0)+1;
   });
-  const red=segCounts.red;
-  const amber=segCounts.amber;
-  const green=segCounts.green;
-  const amb=segCounts.ambassador;
-
-  const avgRisk=total?Math.round(patients.reduce((s,p)=>s+(p.risk_score||0),0)/total):0;
-  const fitRate=total?Math.round((green+amb)/total*100):0;
+  const red=segCounts.red, amber=segCounts.amber, green=segCounts.green, amb=segCounts.ambassador;
+  const highPotRate=total?Math.round((green+amb)/total*100):0;
 
   // Outcome metrikleri
-  const withOutcome=patients.filter(p=>p.outcome_procedures?.length>0);
-  const donusum=total?Math.round(withOutcome.length/total*100):0;
-  const crossSellCount=patients.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
+  const labeled=patients.filter(p=>p.no_appointment===true||p.outcome_procedures?.length>0||p.had_procedure===true);
+  const withOutcome=patients.filter(p=>p.outcome_procedures?.length>0||p.had_procedure===true);
+  const lostCount=patients.filter(p=>p.no_appointment).length;
+  const noOutcome=total-labeled.length;
+  const OUTCOME_THRESHOLD=25;
 
   // Prosedür
   const procMap={};
@@ -1810,72 +1808,16 @@ function Analytics({patients,avgRevenue=40000}){
   const srcMap={};
   patients.forEach(p=>{
     const s=p.answers?.source||"Diğer";
-    const short=s.includes("tavsiye")?"Hasta tavsiyesi":s.includes("itibar")?"Klinik itibarı":s.includes("Google")?"Google":s.includes("Instagram")?"Instagram":"Diğer";
-    srcMap[short]=(srcMap[short]||0)+1;
+    srcMap[s]=(srcMap[s]||0)+1;
   });
   const sources=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
 
   // Son 7 gün
-  const now=Date.now();
-  const dayMs=86400000;
+  const now=Date.now(), dayMs=86400000;
   const bins=Array(7).fill(0);
-  patients.forEach(p=>{
-    const d=now-(new Date(p.created_at||now).getTime());
-    const idx=Math.floor(d/dayMs);
-    if(idx>=0&&idx<7) bins[6-idx]++;
-  });
+  patients.forEach(p=>{const d=now-(new Date(p.created_at||now).getTime());const idx=Math.floor(d/dayMs);if(idx>=0&&idx<7) bins[6-idx]++;});
   const maxBin=Math.max(...bins,1);
-
-  // Motivasyon dağılımı
-  const extMotivCount=patients.filter(p=>
-    ["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].some(x=>p.answers?.motivation===x)
-  ).length;
-  const intMotivCount=patients.filter(p=>
-    ["Kendim için daha iyi hissetmek istiyorum","Özgüvenimi artırmak istiyorum"].some(x=>p.answers?.motivation===x)
-  ).length;
-
-  // Revizyon riski dağılımı
-  const kusursuzCount=patients.filter(p=>p.answers?.revision==="Kusursuz sonuç bekliyorum").length;
-  const noSupportCount=patients.filter(p=>["Kimseye söylemedim","Karşılar"].some(x=>p.answers?.support===x)).length;
-
-  // Sistem içgörüleri — gerçek veriden
-  const insights=[];
-
-  if(total>=5){
-    if(fitRate>=70)
-      insights.push({type:"green",title:"Uygun profil oranı güçlü",body:`Hastaların %${fitRate}'i uygun veya marka elçisi segmentinde. Klinik profil seçimi başarılı görünüyor.`});
-    else if(fitRate<40)
-      insights.push({type:"warn",title:"Uygun profil oranı düşük",body:`Hastaların yalnızca %${fitRate}'i düşük riskli segmente giriyor. Hasta yönlendirme kanalları gözden geçirilebilir.`});
-
-    if(red/total>0.25)
-      insights.push({type:"warn",title:`Yüksek riskli hasta oranı dikkat çekiyor`,body:`Hastaların %${Math.round(red/total*100)}'i kritik segmente giriyor. Konsültasyon öncesi ek beklenti yönetimi faydalı olabilir.`});
-
-    if(kusursuzCount>0)
-      insights.push({type:"warn",title:`${kusursuzCount} hasta kusursuz sonuç bekliyor`,body:"Bu hastalarda revizyon konuşması konsültasyonun önceliği olmalı — beklenti yönetimi kritik."});
-
-    if(extMotivCount>0&&total>=5)
-      insights.push({type:"warn",title:`${extMotivCount} hastada dışsal motivasyon sinyali`,body:`%${Math.round(extMotivCount/total*100)} oranında dışsal baskı tespit edildi. Bu profil revizyon riskiyle ilişkili.`});
-
-    if(amb>0)
-      insights.push({type:"info",title:`${amb} marka elçisi adayı`,body:"Bu hastaları referans programına davet etmek organik büyümeye katkı sağlayabilir."});
-
-    if(noSupportCount>0)
-      insights.push({type:"warn",title:`${noSupportCount} hasta kararını çevresinden saklıyor`,body:"Bu hastalarda iyileşme sürecinde yalnız kalma riski var — konsültasyonda destek sistemi konuşulabilir."});
-
-    if(withOutcome.length>0)
-      insights.push({type:"green",title:`%${donusum} dönüşüm oranı`,body:`${withOutcome.length} hastada randevu outcome'u girilmiş. Daha doğru analiz için tüm hastaların outcome'unu girmek değerli.`});
-
-    if(crossSellCount>0)
-      insights.push({type:"green",title:`${crossSellCount} cross-sell gerçekleşti`,body:"Birden fazla işlem planlanan hastalar sistemdeki form sinyalleriyle örtüşüyor mu karşılaştırılabilir."});
-
-    const topProc=procs[0];
-    if(topProc&&topProc[1]/total>0.3)
-      insights.push({type:"info",title:`${topProc[0]} dominant prosedür`,body:`Hastaların %${Math.round(topProc[1]/total*100)}'i bu işlem için başvuruyor. Segmente özel optimizasyon düşünülebilir.`});
-  }
-
-  if(insights.length===0)
-    insights.push({type:"info",title:"Veri birikiminde",body:"İçgörüler en az 5 hasta kaydından sonra otomatik oluşmaya başlar."});
-
+  const hasWeeklyData=bins.some(v=>v>0);
   const days=["Pzt","Sal","Çar","Per","Cum","Cmt","Paz"];
   const today=new Date().getDay();
   const dayLabels=Array(7).fill(0).map((_,i)=>days[(today-6+i+7)%7]);
@@ -1886,53 +1828,52 @@ function Analytics({patients,avgRevenue=40000}){
   return(
     <div style={{padding:"20px 28px 24px",overflowY:"auto",flex:1}}>
 
+      {/* OUTCOME CTA — eşik altındayken merkez mesaj */}
+      {labeled.length<OUTCOME_THRESHOLD&&(
+        <div style={{...card(),marginBottom:18,textAlign:"center",background:"#fffbeb",border:"1.5px solid #fde68a"}}>
+          <div style={{fontSize:28,marginBottom:8}}>📋</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:20,color:"#92400e",marginBottom:8}}>Dönüşüm analitiğini açmak için outcome işaretleyin</div>
+          <div style={{fontSize:14,color:"#b45309",lineHeight:1.6,marginBottom:12}}>Her hastanın randevu durumunu (dönüştü / kayıp) işaretledikçe sistem kalibre oluyor. Doğruluk tablosu {OUTCOME_THRESHOLD} sonuç girildiğinde açılacak.</div>
+          <div style={{display:"inline-flex",alignItems:"center",gap:12,background:"white",border:"1px solid #fde68a",borderRadius:10,padding:"12px 20px"}}>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:36,color:labeled.length>=OUTCOME_THRESHOLD*0.6?"#059669":"#d97706",lineHeight:1}}>{labeled.length}</div>
+            <div style={{textAlign:"left"}}>
+              <div style={{fontSize:13,fontWeight:600,color:"#92400e"}}>/ {OUTCOME_THRESHOLD} sonuç girildi</div>
+              <div style={{fontSize:12,color:"#b45309"}}>{noOutcome} hasta outcome bekliyor</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* KPI ROW */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(140px,1fr))",gap:10,marginBottom:18}}>
         {[
-          {val:total,lbl:"Toplam Hasta",color:"#1e3a5f",grad:"linear-gradient(90deg,#1e3a5f,#2d5a8e)",note:`Ort. risk: ${avgRisk}`},
-          {val:fitRate+"%",lbl:"Uygun Profil Oranı",color:"#10b981",grad:"linear-gradient(90deg,#10b981,#2d5a8e)",note:`${green+amb} hasta`},
-          {val:red,lbl:"Dikkat Gerektiren",color:"#ef4444",grad:"linear-gradient(90deg,#ef4444,#f97316)",note:`%${Math.round(red/total*100)} oranında`},
-          {val:amb,lbl:"Marka Elçisi Adayı",color:"#8b5cf6",grad:"linear-gradient(90deg,#8b5cf6,#a78bfa)",note:"Referans potansiyeli"},
+          {val:total,lbl:"Toplam Lead",color:"#1e3a5f",grad:"linear-gradient(90deg,#1e3a5f,#2d5a8e)"},
+          {val:highPotRate+"%",lbl:"Yüksek Potansiyel",color:"#10b981",grad:"linear-gradient(90deg,#10b981,#2d5a8e)"},
+          {val:red,lbl:"Dikkatli Yaklaş",color:"#ef4444",grad:"linear-gradient(90deg,#ef4444,#f97316)"},
+          {val:labeled.length>0?Math.round(withOutcome.length/labeled.length*100)+"%":"—",lbl:"Dönüşüm Oranı",color:"#1d4ed8",grad:"linear-gradient(90deg,#1d4ed8,#2563eb)"},
         ].map(k=>(
           <div key={k.lbl} style={{...card(),position:"relative",overflow:"hidden"}}>
             <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:k.grad}}/>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:30,lineHeight:1,marginBottom:3,color:k.color}}>{k.val}</div>
-            <div style={{fontSize:12,color:C.muted,marginBottom:4}}>{k.lbl}</div>
-            <div style={{fontSize:13,fontWeight:500,color:k.color}}>{k.note}</div>
+            <div style={{fontSize:12,color:C.muted}}>{k.lbl}</div>
           </div>
         ))}
       </div>
 
-      {/* TREND + SEGMENT */}
+      {/* SEGMENT + TREND / SOURCES */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
 
-        {/* Weekly trend */}
+        {/* Segment dist — dönüşüm potansiyeli dili */}
         <div style={card()}>
-          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Son 7 Gün</div>
-          <div style={{display:"flex",alignItems:"flex-end",gap:6,height:70,marginBottom:6}}>
-            {bins.map((v,i)=>(
-              <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
-                <div style={{fontSize:11,color:C.muted,fontWeight:500}}>{v||""}</div>
-                <div style={{width:"100%",borderRadius:4,background:v>0?"#1e3a5f":"#d4e1ef",height:`${Math.max(4,Math.round(v/maxBin*52))}px`,transition:"height 0.4s ease"}}/>
-              </div>
-            ))}
-          </div>
-          <div style={{display:"flex",gap:6}}>
-            {dayLabels.map((d,i)=><div key={i} style={{flex:1,textAlign:"center",fontSize:11,color:C.muted}}>{d}</div>)}
-          </div>
-        </div>
-
-        {/* Segment dist */}
-        <div style={card()}>
-          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Segment Dağılımı</div>
+          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Dönüşüm Potansiyeli</div>
           {[
-            {label:"🟢 Uygun Görünüyor",count:green,color:"#10b981"},
-            {label:"🟡 Değerlendirme",count:amber,color:"#f59e0b"},
-            {label:"🔴 Dikkat",count:red,color:"#ef4444"},
-            {label:"🌟 Marka Elçisi",count:amb,color:"#8b5cf6"},
+            {label:"🟢 Yüksek potansiyel",count:green,color:"#10b981"},
+            {label:"🟡 Orta",count:amber,color:"#f59e0b"},
+            {label:"🔴 Dikkatli yaklaş",count:red,color:"#ef4444"},
+            {label:"🌟 VIP / Elçi",count:amb,color:"#8b5cf6"},
           ].map(s=>(
             <div key={s.label} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
-              <div style={{fontSize:13,color:"#2d5a8e",width:130,flexShrink:0}}>{s.label}</div>
+              <div style={{fontSize:13,color:"#2d5a8e",width:140,flexShrink:0}}>{s.label}</div>
               <div style={{flex:1,height:7,background:"#d4e1ef",borderRadius:4,overflow:"hidden"}}>
                 <div style={{height:"100%",borderRadius:4,background:s.color,width:`${total?Math.round(s.count/total*100):0}%`,transition:"width 0.8s ease"}}/>
               </div>
@@ -1940,19 +1881,31 @@ function Analytics({patients,avgRevenue=40000}){
               <div style={{fontSize:12,color:C.muted,minWidth:28,textAlign:"right"}}>{total?Math.round(s.count/total*100):0}%</div>
             </div>
           ))}
-          {/* Color bar */}
           <div style={{display:"flex",height:8,borderRadius:4,overflow:"hidden",marginTop:8}}>
             {[{c:"#10b981",n:green},{c:"#f59e0b",n:amber},{c:"#ef4444",n:red},{c:"#8b5cf6",n:amb}].map((s,i)=>(
               <div key={i} style={{flex:s.n,background:s.c,minWidth:s.n?2:0}}/>
             ))}
           </div>
         </div>
+
+        {/* Kanal dağılımı */}
+        <div style={card()}>
+          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Kanal Dağılımı</div>
+          {sources.map(([src,cnt])=>(
+            <div key={src} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+              <div style={{flex:1,fontSize:13,color:"#2d5a8e",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{src}</div>
+              <div style={{width:60,height:5,background:"#d4e1ef",borderRadius:3,overflow:"hidden",flexShrink:0}}>
+                <div style={{height:"100%",borderRadius:3,background:"#1e3a5f",width:`${Math.round(cnt/sources[0][1]*100)}%`}}/>
+              </div>
+              <div style={{fontSize:13,fontWeight:600,color:C.navy,minWidth:20,textAlign:"right"}}>{cnt}</div>
+              <div style={{fontSize:12,color:C.muted,minWidth:28,textAlign:"right"}}>{Math.round(cnt/total*100)}%</div>
+            </div>
+          ))}
+        </div>
       </div>
 
-      {/* PROCS + INSIGHTS */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-
-        {/* Procedures */}
+      {/* PROSEDÜRLER + TREND */}
+      <div style={{display:"grid",gridTemplateColumns:hasWeeklyData?"1fr 1fr":"1fr",gap:12,marginBottom:12}}>
         <div style={card()}>
           <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>En Sık Prosedürler</div>
           {procs.map(([name,count])=>(
@@ -1966,163 +1919,73 @@ function Analytics({patients,avgRevenue=40000}){
             </div>
           ))}
         </div>
-
-        {/* Auto insights */}
-        <div style={card()}>
-          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Sistem İçgörüleri</div>
-          {insights.length===0&&<div style={{fontSize:13,color:C.muted}}>Daha fazla veri geldikçe içgörüler burada görünecek.</div>}
-          {insights.map((ins,i)=>{
-            const colors={green:{bg:"#f0fdf4",border:"#a7f3d0",title:"#065f46",body:"#047857"},warn:{bg:"#fffbeb",border:"#fde68a",title:"#92400e",body:"#b45309"},info:{bg:"#eef3f9",border:"#d4e1ef",title:"#1e40af",body:"#2563eb"}};
-            const c=colors[ins.type]||colors.info;
-            return(
-              <div key={i} style={{background:c.bg,border:`1.5px solid ${c.border}`,borderRadius:10,padding:"10px 12px",marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:600,color:c.title,marginBottom:3}}>{ins.title}</div>
-                <div style={{fontSize:13,color:c.body,lineHeight:1.55}}>{ins.body}</div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* SOURCE */}
-      <div style={card()}>
-        <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Hasta Kaynakları</div>
-        <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
-          {sources.map(([src,cnt])=>(
-            <div key={src} style={{background:"#eef3f9",border:"1px solid #d4e1ef",borderRadius:10,padding:"10px 14px",textAlign:"center",minWidth:90}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:C.navy,lineHeight:1}}>{cnt}</div>
-              <div style={{fontSize:12,color:C.muted,marginTop:3}}>{src}</div>
-              <div style={{fontSize:12,fontWeight:600,color:"#1e3a5f",marginTop:2}}>{Math.round(cnt/total*100)}%</div>
+        {/* Son 7 gün — sadece veri varsa */}
+        {hasWeeklyData&&(
+          <div style={card()}>
+            <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Son 7 Gün</div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:6,height:70,marginBottom:6}}>
+              {bins.map((v,i)=>(
+                <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                  <div style={{fontSize:11,color:C.muted,fontWeight:500}}>{v||""}</div>
+                  <div style={{width:"100%",borderRadius:4,background:v>0?"#1e3a5f":"#d4e1ef",height:`${Math.max(4,Math.round(v/maxBin*52))}px`,transition:"height 0.4s ease"}}/>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
+            <div style={{display:"flex",gap:6}}>
+              {dayLabels.map((d,i)=><div key={i} style={{flex:1,textAlign:"center",fontSize:11,color:C.muted}}>{d}</div>)}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* NEGATİF ROI — Kayıp Analizi */}
-      {red>0&&(
-        <div style={card({marginBottom:14})}>
-          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#dc2626",marginBottom:12}}>Kayıp Analizi</div>
-          {(()=>{
-            const estNoShow=Math.round(red*0.7); // kırmızıların ~%70'i randevu almaz
-            const estWastedHours=Math.round(estNoShow*0.5*10)/10; // her biri ~30dk konsültasyon
-            const estLostRevenue=estNoShow*avgRevenue; // doktorun belirlediği ortalama işlem geliri
-            const amberLoss=Math.round(amber*0.3); // sarıların ~%30'u randevu almaz
-            const totalLoss=estNoShow+amberLoss;
-            return(
-              <div>
-                <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:10,marginBottom:12}}>
-                  <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"12px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"#dc2626",lineHeight:1}}>{totalLoss}</div>
-                    <div style={{fontSize:11,color:"#991b1b",marginTop:4}}>Randevu almayacak hasta</div>
-                  </div>
-                  <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"12px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"#dc2626",lineHeight:1}}>{estWastedHours} sa</div>
-                    <div style={{fontSize:11,color:"#991b1b",marginTop:4}}>Boşa gidecek konsültasyon</div>
-                  </div>
-                  <div style={{background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"12px",textAlign:"center"}}>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"#dc2626",lineHeight:1}}>~{(estLostRevenue/1000).toFixed(0)}K₺</div>
-                    <div style={{fontSize:11,color:"#991b1b",marginTop:4}}>Potansiyel gelir kaybı</div>
-                  </div>
-                </div>
-                <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"10px 14px",fontSize:12,color:"#92400e",lineHeight:1.6}}>
-                  SculptAI bu hastaları önceden işaretleyerek konsültasyon sürenizi optimize ediyor. Kırmızı segmentteki {red} hastanın ~%70'i randevu almayacak — bunlara standart süre ayırmak yerine kısa değerlendirme yaparak zamanınızı yeşil hastalara yönlendirin.
-                </div>
-              </div>
-            );
-          })()}
+      {/* VERİMLİLİK REHBERLİĞİ */}
+      {red>0&&green>0&&(
+        <div style={{...card(),marginBottom:14,background:"#eff6ff",border:"1.5px solid #bfdbfe"}}>
+          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#1d4ed8",marginBottom:8}}>Zaman Yönetimi</div>
+          <div style={{fontSize:13,color:"#1e40af",lineHeight:1.7}}>
+            Lead'lerinizin %{highPotRate}'i yüksek potansiyelli — ekibinizin zamanını bu gruba yönlendirmek dönüşümü artırabilir. Kırmızı segmentteki {red} lead için standart takip yerine hazırlıklı yaklaşım (bilgilendirme, beklenti yönetimi) önerilir.
+          </div>
         </div>
       )}
 
-      {/* DOĞRULAMA TABLOSU — Confusion Matrix */}
-      {(()=>{
-        // Etiketli hastalar — outcome girilmiş olanlar
-        const labeled=patients.filter(p=>p.no_appointment===true||p.outcome_procedures?.length>0||p.had_procedure===true);
-        if(labeled.length<5) return(
-          <div style={card()}>
-            <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:8}}>Sistem Doğrulama</div>
-            <div style={{fontSize:13,color:C.muted,lineHeight:1.6}}>En az 5 hastanın outcome'u girildiğinde doğrulama tablosu burada görünecek. Şu an {labeled.length} etiketli hasta var.</div>
-          </div>
-        );
-
-        // Her segment için: kaç hasta var, kaçı gelmedi (no_appointment), kaçı geldi (outcome var)
+      {/* DOĞRULAMA TABLOSU — sadece yeterli outcome varsa */}
+      {labeled.length>=OUTCOME_THRESHOLD&&(()=>{
         const segData={red:{total:0,noShow:0,came:0},amber:{total:0,noShow:0,came:0},green:{total:0,noShow:0,came:0},ambassador:{total:0,noShow:0,came:0}};
         labeled.forEach(p=>{
-          const c=classify(p.risk_score||0,p.answers||{});
+          const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
           const seg=segData[c.cat]||segData.green;
           seg.total++;
           if(p.no_appointment) seg.noShow++;
           else seg.came++;
         });
 
-        // "Kırmızı deyince ne kadar haklıyız?" — kırmızının gerçekten gelmeme oranı
-        const redAccuracy=segData.red.total>0?Math.round(segData.red.noShow/segData.red.total*100):0;
-        // "Yeşil deyince ne kadar haklıyız?" — yeşilin gerçekten gelme oranı  
-        const greenAccuracy=segData.green.total>0?Math.round(segData.green.came/segData.green.total*100):0;
-        const ambAccuracy=segData.ambassador.total>0?Math.round(segData.ambassador.came/segData.ambassador.total*100):0;
-        // Genel doğruluk — (doğru kırmızı + doğru yeşil+amb) / toplam
-        const correct=segData.red.noShow+segData.green.came+segData.ambassador.came+segData.amber.came;
-        const overallAcc=labeled.length>0?Math.round(correct/labeled.length*100):0;
-
-        // Outcome girilmemiş hasta sayısı
-        const noOutcome=patients.filter(p=>!p.no_appointment&&(!p.outcome_procedures||p.outcome_procedures.length===0)&&p.had_procedure===null).length;
-
         const segColors={red:"#dc2626",amber:"#d97706",green:"#059669",ambassador:"#7c3aed"};
-        const segLabels={red:"🔴 Öncelikli",amber:"🟡 Dikkatli",green:"🟢 Uygun",ambassador:"🌟 Elçi"};
+        const segLabels={red:"🔴 Dikkatli yaklaş",amber:"🟡 Orta",green:"🟢 Yüksek potansiyel",ambassador:"🌟 VIP"};
 
         return(
           <div style={card()}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-              <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e"}}>Sistem Doğrulama</div>
-              <div style={{fontSize:12,color:C.muted}}>{labeled.length} etiketli / {total} toplam hasta</div>
+              <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e"}}>Segment Doğrulama</div>
+              <div style={{fontSize:12,color:C.muted}}>{labeled.length} sonuç girildi</div>
             </div>
-
-            {/* Genel doğruluk */}
-            <div style={{display:"flex",gap:10,marginBottom:14}}>
-              <div style={{flex:1,background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#059669",lineHeight:1}}>%{overallAcc}</div>
-                <div style={{fontSize:11,color:"#065f46",marginTop:4}}>Genel Doğruluk</div>
-              </div>
-              <div style={{flex:1,background:"#fef2f2",border:"1px solid #fecaca",borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#dc2626",lineHeight:1}}>%{redAccuracy}</div>
-                <div style={{fontSize:11,color:"#991b1b",marginTop:4}}>Kırmızı İsabet</div>
-                <div style={{fontSize:10,color:"#dc2626",marginTop:2}}>{segData.red.noShow}/{segData.red.total} gelmedi</div>
-              </div>
-              <div style={{flex:1,background:"#ecfdf5",border:"1px solid #a7f3d0",borderRadius:10,padding:"12px 14px",textAlign:"center"}}>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,color:"#059669",lineHeight:1}}>%{greenAccuracy}</div>
-                <div style={{fontSize:11,color:"#065f46",marginTop:4}}>Yeşil İsabet</div>
-                <div style={{fontSize:10,color:"#059669",marginTop:2}}>{segData.green.came}/{segData.green.total} geldi</div>
-              </div>
-            </div>
-
-            {/* Segment bazlı tablo */}
-            <div style={{border:"1px solid #d4e1ef",borderRadius:8,overflow:"hidden",marginBottom:10,overflowX:"auto"}}>
+            <div style={{border:"1px solid #d4e1ef",borderRadius:8,overflow:"hidden",overflowX:"auto"}}>
               <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",background:"#eef3f9",minWidth:400,padding:"8px 12px",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.muted,fontWeight:600}}>
-                <div>Segment</div><div style={{textAlign:"center"}}>Toplam</div><div style={{textAlign:"center"}}>Geldi</div><div style={{textAlign:"center"}}>Gelmedi</div><div style={{textAlign:"center"}}>İsabet</div>
+                <div>Segment</div><div style={{textAlign:"center"}}>Toplam</div><div style={{textAlign:"center"}}>Dönüştü</div><div style={{textAlign:"center"}}>Kayıp</div><div style={{textAlign:"center"}}>Dönüşüm</div>
               </div>
-              {["red","amber","green","ambassador"].map(seg=>{
+              {["green","ambassador","amber","red"].map(seg=>{
                 const d=segData[seg];
                 if(d.total===0) return null;
-                const acc=seg==="red"?(d.total>0?Math.round(d.noShow/d.total*100):0):(d.total>0?Math.round(d.came/d.total*100):0);
+                const rate=d.total>0?Math.round(d.came/d.total*100):0;
                 return(
                   <div key={seg} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",padding:"9px 12px",minWidth:400,borderTop:"1px solid #eef3f9",fontSize:13}}>
                     <div style={{color:segColors[seg],fontWeight:500}}>{segLabels[seg]}</div>
                     <div style={{textAlign:"center",color:C.navy}}>{d.total}</div>
                     <div style={{textAlign:"center",color:"#059669"}}>{d.came}</div>
                     <div style={{textAlign:"center",color:"#dc2626"}}>{d.noShow}</div>
-                    <div style={{textAlign:"center",fontWeight:600,color:acc>=70?"#059669":acc>=50?"#d97706":"#dc2626"}}>%{acc}</div>
+                    <div style={{textAlign:"center",fontWeight:600,color:rate>=70?"#059669":rate>=50?"#d97706":"#dc2626"}}>%{rate}</div>
                   </div>
                 );
               })}
-            </div>
-
-            {noOutcome>0&&(
-              <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:8,padding:"9px 12px",fontSize:12,color:"#92400e",lineHeight:1.5}}>
-                ⚠ {noOutcome} hastanın outcome'u henüz girilmedi. Doğrulama tablosu daha güvenilir olması için tüm hastaların sonucunu girin.
-              </div>
-            )}
-
-            <div style={{fontSize:11,color:C.muted,marginTop:8,lineHeight:1.5}}>
-              Kırmızı isabet: "Kırmızı dediğimizin kaçı gerçekten gelmedi?" · Yeşil isabet: "Yeşil dediğimizin kaçı gerçekten geldi?"
             </div>
           </div>
         );
