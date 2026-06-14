@@ -536,80 +536,90 @@ function classify(score,a,threshold=V6B_THRESHOLD){
 
   const riskFactors=[bddRisk,highExp&&extMotiv,manyDocs,unrealistic,rhinoRedFlag,breastSymRedFlag,storyRedFlag].filter(Boolean).length;
 
-  // ── Dinamik "neden kırmızı" açıklaması ──────────────────────────────────
-  function buildRedReason(){
+  // ── Dinamik "neden" açıklaması — v6b ampirik-doğrulanmış 4 feature ────────
+  // riskBilgisi, revizyon, oncekiAmeliyat, prosedurRiski → ampirik yönü kanıtlı
+  // Diğer sinyaller (bddRisk, rhinoRedFlag vb.) klinik değer taşır ama skora girmez
+  const noRiskKnow = a.riskKnowledge==="Hiçbir bilgim yok";
+  const someRiskKnow = a.riskKnowledge==="Genel olarak bilgi sahibiyim";
+  const prevBad = a.prevSurgery==="Evet ve hiç memnun değilim"||a.prevSurgery==="Evet ama beklentimi karşılamadı";
+  const procRiskVal = PROC_RISK_MAP[a.procedure] ?? 0.3;
+  const highProcRisk = procRiskVal >= 0.35;
+
+  function buildReason(){
     const reasons=[];
 
-    // En güçlü sinyal önce — veri destekli
-    if(extMotiv && a.procedure==="Burun Estetiği")
-      reasons.push({txt:"Dışsal motivasyon + burun estetiği — bu kombinasyon verilerimizde %100 randevu almadı (3/3).",weight:10});
-    else if(extMotiv)
-      reasons.push({txt:`"${a.motivation}" motivasyonu. Karar başkalarına bağlı — randevu alma olasılığı düşük.`,weight:8});
-
-    if(a.procedure==="Meme Asimetrisinin Giderilmesi")
-      reasons.push({txt:"Meme asimetrisi vakalarının tamamı randevu almadı — beklenti yönetimi kritik.",weight:9});
-
-    if(a.prevSurgery==="Evet ve hiç memnun değilim"||a.prevSurgery==="Evet ama beklentimi karşılamadı")
-      reasons.push({txt:"Önceki ameliyattan memnun değil — bu sefer beklenti daha da yüksek gelecek.",weight:9});
-
-    if(bddRisk)
-      reasons.push({txt:"Vücut odaklanması çok yoğun — görünüm günlük hayatı etkiliyor. BDD değerlendirmesi önerilir.",weight:10});
+    // ── Çekirdek 4 feature — ampirik yönü doğrulanmış, skora giren ──
+    if(noRiskKnow)
+      reasons.push({txt:"İşlemin riskleri ve iyileşme süreci hakkında hiç bilgisi yok — bilinçli karar vermesi güçleşiyor.",weight:10});
+    else if(someRiskKnow && score>=40)
+      reasons.push({txt:"Risk ve iyileşme bilgisi genel düzeyde — detayları konsültasyonda somutlaştırın.",weight:4});
 
     if(unrealistic)
-      reasons.push({txt:"\"Kusursuz sonuç bekliyorum\" — hiçbir ameliyat bu beklentiyi karşılayamaz.",weight:7});
+      reasons.push({txt:"\"Kusursuz sonuç\" beklentisi — hiçbir cerrahi bu beklentiyi karşılayamaz. Gerçekçi çerçeve kurulmalı.",weight:9});
 
-    if(highExp)
-      reasons.push({txt:"Tamamen farklı görünmek istiyor — gerçekçi değişim sınırları konuşulmalı.",weight:7});
+    if(a.prevSurgery==="Evet ve hiç memnun değilim")
+      reasons.push({txt:"Önceki ameliyattan hiç memnun değil — beklenti çıtası çok yüksek gelecek. Önceki deneyimi dinleyin.",weight:9});
+    else if(a.prevSurgery==="Evet ama beklentimi karşılamadı")
+      reasons.push({txt:"Önceki ameliyat beklentisini karşılamadı — bu sefer neyin farklı olacağını somutlaştırın.",weight:8});
+
+    if(highProcRisk)
+      reasons.push({txt:`${a.procedure} karmaşık bir prosedür — iyileşme süreci ve sınırlamalar detaylı anlatılmalı.`,weight:7});
+
+    // ── Ek klinik sinyaller — skora girmez ama doktora değerli ──
+    if(bddRisk)
+      reasons.push({txt:"Görünüm odağı günlük hayatı etkiliyor — BDD ön değerlendirmesi düşünülebilir.",weight:10});
+
+    if(extMotiv && a.procedure==="Burun Estetiği")
+      reasons.push({txt:"Burun estetiğinde dışsal motivasyon — sonuç memnuniyeti başkalarının tepkisine bağımlı kalabilir.",weight:6});
+    else if(extMotiv)
+      reasons.push({txt:"Motivasyon dışsal kaynaklı — kendi iç motivasyonunu netleştirmek önemli.",weight:5});
+
+    if(rhinoRedFlag)
+      reasons.push({txt:"Aklındaki ünlü referansı — kendi yüz yapısına uygunluk konuşulmalı.",weight:5});
+
+    if(breastSymRedFlag)
+      reasons.push({txt:"Küçük asimetri bile çok rahatsız ediyor — simetri sınırları açıklanmalı.",weight:5});
 
     if(storyRedFlag){
       const kw=redKeywords.find(k=>storyLower.includes(k));
-      reasons.push({txt:`Açık anlatısında "${kw}" ifadesi var — beklenti düzeyine dikkat.`,weight:6});
+      reasons.push({txt:`Açık anlatısında "${kw}" — beklenti düzeyine dikkat.`,weight:4});
     }
 
-    if(rhinoRedFlag)
-      reasons.push({txt:"Burnunda ünlü referansı var — kendi yüz yapısına uygunluk konuşulmalı.",weight:6});
-
-    if(breastSymRedFlag)
-      reasons.push({txt:"Küçük asimetri bile çok rahatsız ediyor — meme operasyonlarında simetri sınırları açıklanmalı.",weight:6});
-
-    if(manyDocs)
-      reasons.push({txt:"Birçok doktora danışmış — karar verememe ya da çok yüksek standart sinyali.",weight:5});
-
-    if(noSupport)
-      reasons.push({txt:"Çevresinden gizliyor veya karşı çıkıyorlar — karar kırılganlığı yüksek.",weight:5});
-
     if(score>=threshold && reasons.length===0)
-      reasons.push({txt:`Risk değerlendirmesi ${score}/100 — profil kombinasyonu randevusuzluk ile ilişkili.`,weight:4});
+      reasons.push({txt:`Risk profili ${score}/100 — kombinasyon randevusuzluk ile ilişkili.`,weight:3});
 
-    // En yüksek ağırlıklı 1-2 sebebi döndür
     reasons.sort((a,b)=>b.weight-a.weight);
     return reasons.slice(0,2).map(r=>r.txt).join(" · ");
   }
 
+  // v6b çekirdek risk faktör sayısı (skora giren 4 feature'dan)
+  const coreRiskFactors=[noRiskKnow, unrealistic, prevBad, highProcRisk].filter(Boolean).length;
+
   // Elçi
-  if(socialActive&&riskFactors===0)
+  if(socialActive&&coreRiskFactors===0&&!bddRisk)
     return{cat:"ambassador",label:"Marka Elçisi",icon:"🌟",color:"#7c3aed",bg:"#faf5ff",border:"#ddd6fe",textColor:"#5b21b6",obs:"Randevuya hazır · Referans potansiyeli yüksek",obsBody:"Düşük risk, içsel motivasyon, aktif sosyal profil. Konsültasyon standart ilerleyebilir. Referans programını aktive edin.",ambassador:true};
 
-  // Kırmızı
-  if(score>=threshold||riskFactors>=3||bddRisk){
-    const reason=buildRedReason();
+  // Kırmızı — v6b threshold veya ağır klinik sinyal
+  if(score>=threshold||coreRiskFactors>=3||bddRisk){
+    const reason=buildReason();
     return{cat:"red",label:"Öncelikli Değerlendirme",icon:"🔴",color:"#dc2626",bg:"#fef2f2",border:"#fecaca",textColor:"#991b1b",obs:"Genişletilmiş konsültasyon önerilir",obsBody:reason,ambassador:false};
   }
 
-  // Amber
-  if(score>=45||riskFactors>=2||(highExp&&noSupport)||(extMotiv&&manyDocs)){
+  // Amber — threshold altında ama sinyaller var
+  const amberThreshold=Math.round(threshold*0.65); // ~31 for threshold=48
+  if(score>=amberThreshold||coreRiskFactors>=2||(bddRisk)||(extMotiv&&highExp)){
     const amberReasons=[];
-    if(extMotiv) amberReasons.push("dışsal motivasyon");
-    if(highExp) amberReasons.push("yüksek beklenti");
-    if(manyDocs) amberReasons.push("çok doktor danışımı");
-    if(noSupport) amberReasons.push("destek eksikliği");
+    if(noRiskKnow||someRiskKnow) amberReasons.push("risk bilgisi eksik");
     if(unrealistic) amberReasons.push("kusursuz beklenti");
-    const amberStr=amberReasons.length>0?`${amberReasons.join(", ")} sinyali var. Konsültasyonda bu konuları aç.`:"Bazı sinyaller dikkat gerektiriyor — beklenti ve motivasyonu konuş.";
+    if(prevBad) amberReasons.push("geçmiş kötü deneyim");
+    if(highProcRisk) amberReasons.push("karmaşık prosedür");
+    if(extMotiv) amberReasons.push("dışsal motivasyon");
+    const amberStr=amberReasons.length>0?`${amberReasons.join(", ")} sinyali var. Konsültasyonda bu konuları açın.`:"Bazı sinyaller dikkat gerektiriyor — beklenti ve süreci konuşun.";
     return{cat:"amber",label:"Dikkatli Değerlendir",icon:"🟡",color:"#d97706",bg:"#fffbeb",border:"#fde68a",textColor:"#92400e",obs:"Bazı sinyaller dikkat gerektiriyor",obsBody:amberStr,ambassador:false};
   }
 
   // Yeşil
-  return{cat:"green",label:"Randevuya Hazır",icon:"🟢",color:"#059669",bg:"#ecfdf5",border:"#a7f3d0",textColor:"#047857",obs:"Profil uygun görünüyor",obsBody:"İçsel motivasyon, gerçekçi beklenti ve süreç farkındalığı saptandı. Standart konsültasyon yeterli.",ambassador:false};
+  return{cat:"green",label:"Randevuya Hazır",icon:"🟢",color:"#059669",bg:"#ecfdf5",border:"#a7f3d0",textColor:"#047857",obs:"Profil uygun görünüyor",obsBody:"Gerçekçi beklenti ve süreç farkındalığı saptandı. Standart konsültasyon yeterli.",ambassador:false};
 }
 
 function predictOutcomes(score, a){
