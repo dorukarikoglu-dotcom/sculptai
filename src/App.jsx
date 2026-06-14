@@ -4823,11 +4823,11 @@ function AnalyticsBeta(){
     const pp=patients.filter(p=>p.answers?.procedure===proc);
     const wo=pp.filter(p=>p.outcome_procedures?.length>0||p.no_appointment);
     const cv=pp.filter(p=>p.outcome_procedures?.length>0);
-    const sp=pp.filter(p=>p.satisfaction_1m);
+    const lostCount=pp.filter(p=>p.no_appointment).length;
     return{
       proc,n,
       conv:wo.length>0?Math.round(cv.length/wo.length*100):null,
-      sat:sp.length>0?Math.round(sp.reduce((s,p)=>s+(satMap[p.satisfaction_1m]||50),0)/sp.length):null,
+      lost:wo.length>0?Math.round(lostCount/wo.length*100):null,
       conf:n<10?"Yetersiz":n<30?"Düşük":"Yeterli",
     };
   });
@@ -4891,7 +4891,7 @@ function AnalyticsBeta(){
           {[
             {label:"Toplam Hasta",val:total,icon:"👥"},
             {label:"Dönüşüm Oranı",val:convRate+"%",sub:`${converted.length}/${withOutcome.length} (outcome girili)`,icon:"📊"},
-            {label:"Ort. Memnuniyet",val:avgSat?avgSat+"%":"—",sub:satPatients.length>0?`${satPatients.length} hasta`:"Veri yok",icon:"⭐"},
+            {label:"Kayıp Oranı",val:total?Math.round(patients.filter(p=>p.no_appointment).length/total*100)+"%":"—",sub:`${patients.filter(p=>p.no_appointment).length} kayıp`,icon:"📉"},
             {label:"Klinik Sayısı",val:doctors.length,icon:"🏥"},
           ].map((m,i)=>(
             <div key={i} style={{background:"white",border:"1px solid "+C.border,borderRadius:12,padding:"16px",textAlign:"center"}}>
@@ -4941,7 +4941,7 @@ function AnalyticsBeta(){
           <table style={{width:"100%",borderCollapse:"collapse",fontSize:12}}>
             <thead>
               <tr>
-                {["Prosedür","Hasta","Dönüşüm %","Memnuniyet %","Confidence"].map(h=>(
+                {["Prosedür","Hasta","Dönüşüm %","Kayıp %","Confidence"].map(h=>(
                   <th key={h} style={{padding:"8px 10px",textAlign:"left",borderBottom:"2px solid "+C.border,color:C.muted,fontSize:10,letterSpacing:"0.08em"}}>{h}</th>
                 ))}
               </tr>
@@ -4952,7 +4952,7 @@ function AnalyticsBeta(){
                   <td style={{padding:"8px 10px",fontWeight:500,borderBottom:"1px solid #eef3f9"}}>{r.proc}</td>
                   <td style={{padding:"8px 10px",borderBottom:"1px solid #eef3f9"}}>{r.n}</td>
                   <td style={{padding:"8px 10px",borderBottom:"1px solid #eef3f9",fontWeight:600,color:r.conv===null?C.muted:r.conv>=60?"#059669":r.conv>=30?"#d97706":"#dc2626"}}>{r.conv!==null?r.conv+"%":"—"}</td>
-                  <td style={{padding:"8px 10px",borderBottom:"1px solid #eef3f9",color:r.sat?C.navy:C.muted}}>{r.sat?r.sat+"%":"—"}</td>
+                  <td style={{padding:"8px 10px",borderBottom:"1px solid #eef3f9",color:r.lost!==null?C.navy:C.muted}}>{r.lost!==null?r.lost+"%":"—"}</td>
                   <td style={{padding:"8px 10px",borderBottom:"1px solid #eef3f9"}}><span style={{padding:"2px 8px",borderRadius:10,fontSize:10,fontWeight:600,background:confColor(r.conf)+"18",color:confColor(r.conf),border:"1px solid "+confColor(r.conf)+"33"}}>{r.conf}</span></td>
                 </tr>
               ))}
