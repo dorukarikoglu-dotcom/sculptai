@@ -1962,231 +1962,6 @@ function SettingsScreen({doctor,onLogout,newU,setNewU,newP,setNewP,newP2,setNewP
 
 /* ─── DOCTOR PANEL ───────────────────────────────────────────────────────── */
 /* ─── SEKRETER GÖRÜNÜMÜ ──────────────────────────────────────────────────── */
-function SecretaryView({patients,doctorId,doctor,isDemo,onRefresh}){
-  const [secFilter,setSecFilter]=useState("pending");
-  const [saving,setSaving]=useState(null);
-  const [satOpen,setSatOpen]=useState(null);
-  const [procDropdown,setProcDropdown]=useState(null); // prosedür seçim açık hasta id
-  const [selectedProcs,setSelectedProcs]=useState({}); // {patientId: [proc1, proc2]}
-
-  const ALL_PROCS=["Burun Estetiği","Meme Küçültme","Meme Büyütme","Meme Dikleştirme","Karın Germe","Liposuction","Üst Göz Kapağı","Alt Göz Kapağı","Botoks","Dolgu","Kol Germe","Yüz Germe","Uyluk Germe","Popo Estetiği","Jinekomasti"];
-  const procList=doctor?.enabled_procedures||ALL_PROCS;
-
-  function toggleProc(patientId,proc){
-    setSelectedProcs(prev=>{
-      const current=prev[patientId]||[];
-      return {...prev,[patientId]:current.includes(proc)?current.filter(x=>x!==proc):[...current,proc]};
-    });
-  }
-
-  const [toast,setToast]=useState(null);
-  function showToast(msg,ok=true){setToast({msg,ok});setTimeout(()=>setToast(null),2500);}
-
-  async function sbUpdate(patientId,data,retries=3){
-    for(let i=0;i<retries;i++){
-      try{
-        const {error}=await sb.from("patients").update(data).eq("id",patientId);
-        if(error) throw error;
-        return true;
-      }catch(e){
-        if(i===retries-1) return false;
-        await new Promise(r=>setTimeout(r,1000*(i+1)));
-      }
-    }
-    return false;
-  }
-
-  async function saveRandevu(patientId){
-    if(isDemo){alert("Demo modunda kayıt yapılamaz.");return;}
-    const procs=selectedProcs[patientId]||[];
-    if(procs.length===0){alert("En az bir prosedür seçin.");return;}
-    setSaving(patientId);
-    const ok=await sbUpdate(patientId,{no_appointment:false,outcome_procedures:procs});
-    setSaving(null);
-    if(ok){
-      setProcDropdown(null);
-      showToast("Randevu kaydedildi ✓");
-      if(onRefresh) onRefresh();
-    } else {
-      showToast("Kayıt başarısız — tekrar deneyin",false);
-    }
-  }
-
-  async function markOutcome(patientId,type,extra={}){
-    if(isDemo){alert("Demo modunda kayıt yapılamaz.");return;}
-    setSaving(patientId);
-    let data={};
-    if(type==="randevu_almadi") data={no_appointment:true,outcome_procedures:[]};
-    else if(type==="islem_yapildi") data={had_procedure:true,procedure_date:new Date().toISOString().slice(0,10)};
-    else if(type==="vazgecti") data={had_procedure:false};
-    else if(type==="geri_al") data={no_appointment:false,had_procedure:null,outcome_procedures:[]};
-
-    const ok=await sbUpdate(patientId,data);
-    setSaving(null);
-    if(ok){
-      showToast("Kaydedildi ✓");
-      if(onRefresh) onRefresh();
-    } else {
-      showToast("Kayıt başarısız — tekrar deneyin",false);
-    }
-  }
-
-  const enriched=patients.map(p=>{
-    const a=p.answers||{};
-    let status="pending";
-    let statusLabel="Sonuç Bekleniyor";
-    let statusColor="#d97706";
-    let statusBg="#fffbeb";
-    if(p.no_appointment){
-      status="randevu_almadi"; statusLabel="Randevu Almadı"; statusColor="#dc2626"; statusBg="#fef2f2";
-    } else if(p.had_procedure===true&&false){
-      status="tamamlandi"; statusLabel="Tamamlandı"; statusColor="#059669"; statusBg="#ecfdf5";
-    } else if(p.had_procedure===true){
-      status="islem_yapildi"; statusLabel="İşlem Yapıldı"; statusColor="#059669"; statusBg="#ecfdf5";
-    } else if(p.had_procedure===false){
-      status="vazgecti"; statusLabel="Vazgeçti"; statusColor="#dc2626"; statusBg="#fef2f2";
-    } else if(p.outcome_procedures?.length>0){
-      status="randevu_aldi"; statusLabel="Randevu Aldı"; statusColor="#2563eb"; statusBg="#eff6ff";
-    }
-    return {...p,status,statusLabel,statusColor,statusBg,patientName:a.name||"İsimsiz",procedure:a.procedure||"Belirtilmedi",date:p.created_at?new Date(p.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):"—"};
-  });
-
-  const filtered=secFilter==="pending"?enriched.filter(p=>p.status==="pending"||p.status==="randevu_aldi"||p.status==="islem_yapildi"):
-    secFilter==="done"?enriched.filter(p=>["randevu_almadi","vazgecti","tamamlandi"].includes(p.status)):enriched;
-
-  const pendingCount=enriched.filter(p=>p.status==="pending").length;
-  const needsActionCount=enriched.filter(p=>["pending","randevu_aldi","islem_yapildi"].includes(p.status)).length;
-  const doneCount=enriched.filter(p=>["randevu_almadi","vazgecti","tamamlandi"].includes(p.status)).length;
-
-  const C={border:"#d4e1ef",muted:"#7b9ab5",navy:"#1e3a5f"};
-  const satOptions=["Çok Memnun","Memnun","Kararsız","Memnun Değil"];
-
-  return(
-    <div style={{flex:1,overflowY:"auto",padding:"20px 28px 24px",position:"relative"}}>
-      {toast&&(
-        <div style={{position:"fixed",top:20,right:20,padding:"12px 20px",borderRadius:10,background:toast.ok?"#059669":"#dc2626",color:"white",fontSize:13,fontWeight:600,zIndex:9999,boxShadow:"0 4px 12px rgba(0,0,0,0.15)",animation:"fadeUp 0.3s ease"}}>{toast.msg}</div>
-      )}
-      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-        <div>
-          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.1em",textTransform:"uppercase",color:"#2d5a8e"}}>Sekreter Paneli</div>
-          <div style={{fontSize:12,color:C.muted,marginTop:2}}>Randevu durumlarını girin</div>
-        </div>
-        <div style={{display:"flex",gap:6}}>
-          {[["pending",`İşlem Bekleyen (${needsActionCount})`],["done",`Tamamlanan (${doneCount})`],["all","Tümü"]].map(([v,l])=>(
-            <button key={v} onClick={()=>setSecFilter(v)} style={{padding:"5px 13px",borderRadius:20,fontSize:12,fontWeight:500,border:`1.5px solid ${secFilter===v?"#1e3a5f":"#d4e1ef"}`,background:secFilter===v?"#1e3a5f":"#f8fafd",color:secFilter===v?"#f8fafd":"#7b9ab5"}}>{l}</button>
-          ))}
-        </div>
-      </div>
-
-      {needsActionCount>0&&secFilter==="pending"&&(
-        <div style={{background:"#fffbeb",border:"1px solid #fde68a",borderRadius:10,padding:"12px 16px",marginBottom:16,display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontSize:24}}>⏳</div>
-          <div>
-            <div style={{fontSize:14,fontWeight:600,color:"#92400e"}}>{needsActionCount} hasta işlem bekliyor</div>
-            <div style={{fontSize:12,color:"#b45309",marginTop:2}}>{pendingCount} randevu durumu bekleniyor</div>
-          </div>
-        </div>
-      )}
-
-      {filtered.length===0&&(
-        <div style={{textAlign:"center",padding:"40px 20px",color:C.muted}}>
-          <div style={{fontSize:40,marginBottom:10}}>{secFilter==="pending"?"🎉":"📋"}</div>
-          <div style={{fontSize:15,color:"#2d5a8e"}}>{secFilter==="pending"?"Tüm sonuçlar girildi!":"Henüz hasta yok"}</div>
-        </div>
-      )}
-
-      <div style={{display:"flex",flexDirection:"column",gap:8}}>
-        {filtered.map(p=>(
-          <div key={p.id} style={{background:"#f8fafd",border:"1px solid #d4e1ef",borderRadius:12,padding:"12px 14px"}}>
-            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:C.navy,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1,minWidth:0}}>{p.patientName}</div>
-              <span style={{fontSize:10,padding:"2px 8px",borderRadius:10,background:p.statusBg,color:p.statusColor,border:`1px solid ${p.statusColor}22`,flexShrink:0,fontWeight:500}}>{p.statusLabel}</span>
-            </div>
-            <div style={{fontSize:12,color:C.muted,marginBottom:4}}>{p.procedure} · {p.date}</div>
-            {p.answers?.phone&&(
-              <button onClick={()=>{
-                const phone=p.answers.phone.replace(/\D/g,"").replace(/^0/,"90");
-                const msg=encodeURIComponent(`Merhaba ${p.patientName}, ${p.procedure} işleminiz hakkında bilgi vermek istiyoruz. Sorularınız için bize ulaşabilirsiniz.`);
-                window.open(`https://wa.me/${phone}?text=${msg}`,"_blank");
-              }} style={{fontSize:11,color:"#25D366",background:"transparent",border:"none",cursor:"pointer",textDecoration:"underline",padding:0,marginBottom:6}}>
-                📱 WhatsApp Gönder
-              </button>
-            )}
-
-            {/* Adım 1: Randevu aldı mı? */}
-            {p.status==="pending"&&(
-              <div>
-                <div style={{display:"flex",gap:6,marginTop:6}}>
-                  <button onClick={()=>markOutcome(p.id,"randevu_almadi")} disabled={saving===p.id}
-                    style={{flex:1,padding:"9px 8px",borderRadius:8,border:"1px solid #fecaca",background:"#fef2f2",color:"#dc2626",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                    ✕ Almadı
-                  </button>
-                  <button onClick={()=>{setProcDropdown(procDropdown===p.id?null:p.id);setSelectedProcs(prev=>({...prev,[p.id]:prev[p.id]||[p.procedure].filter(x=>x!=="Belirtilmedi")}));}} disabled={saving===p.id}
-                    style={{flex:1,padding:"9px 8px",borderRadius:8,border:"1px solid #bfdbfe",background:"#eff6ff",color:"#2563eb",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                    ✓ Randevu Aldı
-                  </button>
-                </div>
-                {/* Prosedür seçim dropdown */}
-                {procDropdown===p.id&&(
-                  <div style={{marginTop:10,padding:"14px 16px",background:"#eef3f9",border:"1px solid #d4e1ef",borderRadius:10}}>
-                    <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#7b9ab5",marginBottom:6}}>Hangi prosedürler planlandı?</div>
-                    <div style={{fontSize:12,color:C.muted,marginBottom:8}}>Form prosedürü: <strong style={{color:C.navy}}>{p.procedure}</strong></div>
-                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:12}}>
-                      {procList.map(proc=>{
-                        const sel=(selectedProcs[p.id]||[]).includes(proc);
-                        return(
-                          <button key={proc} onClick={()=>toggleProc(p.id,proc)}
-                            style={{padding:"5px 11px",borderRadius:20,fontSize:12,border:`1px solid ${sel?"#1e3a5f":"#d4e1ef"}`,background:sel?"#1e3a5f":"transparent",color:sel?"#f8fafd":"#7b9ab5",cursor:"pointer"}}>
-                            {proc}{proc===p.procedure?" ✓":""}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>saveRandevu(p.id)} disabled={saving===p.id}
-                        style={{padding:"9px 20px",background:"#1e3a5f",border:"none",borderRadius:7,color:"#f8fafd",fontSize:13,fontWeight:500,cursor:"pointer"}}>Kaydet</button>
-                      <button onClick={()=>setProcDropdown(null)}
-                        style={{padding:"9px 14px",background:"transparent",border:"1px solid #d4e1ef",borderRadius:7,color:"#7b9ab5",fontSize:13,cursor:"pointer"}}>İptal</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Adım 2: İşlem yapıldı mı? */}
-            {p.status==="randevu_aldi"&&(
-              <div style={{display:"flex",gap:6,marginTop:6}}>
-                <button onClick={()=>markOutcome(p.id,"vazgecti")} disabled={saving===p.id}
-                  style={{flex:1,padding:"9px 8px",borderRadius:8,border:"1px solid #fecaca",background:"#fef2f2",color:"#dc2626",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                  ✕ Vazgeçti
-                </button>
-                <button onClick={()=>markOutcome(p.id,"islem_yapildi")} disabled={saving===p.id}
-                  style={{flex:1,padding:"9px 8px",borderRadius:8,border:"1px solid #a7f3d0",background:"#ecfdf5",color:"#059669",fontSize:12,fontWeight:600,cursor:"pointer"}}>
-                  ✓ İşlem Yapıldı
-                </button>
-                <button onClick={()=>markOutcome(p.id,"geri_al")} disabled={saving===p.id}
-                  style={{padding:"9px 10px",borderRadius:8,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",fontSize:11,cursor:"pointer"}}>
-                  ↩ Geri Al
-                </button>
-              </div>
-            )}
-
-            {/* Geri alma */}
-            {(p.status==="randevu_almadi"||p.status==="vazgecti"||p.status==="tamamlandi"||p.status==="islem_yapildi")&&(
-              <div style={{display:"flex",alignItems:"center",gap:6,marginTop:6}}>
-                <button onClick={()=>markOutcome(p.id,"geri_al")} disabled={saving===p.id}
-                  style={{fontSize:11,color:"#7b9ab5",background:"transparent",border:"1px solid #d4e1ef",borderRadius:6,padding:"4px 10px",cursor:"pointer"}}>
-                  ↩ Geri Al
-                </button>
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function Analytics({patients,avgRevenue=40000}){
   const total=patients.length;
   if(total===0) return(
@@ -2740,13 +2515,12 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
 
         {/* TAB NAV — Desktop */}
         {!isMobile&&<div style={{display:"flex",gap:0,padding:"0 28px",background:"#f8fafd",borderBottom:"1px solid #d4e1ef",flexShrink:0}}>
-          {[["patients","Hastalar"],["secretary","Sekreter"],["analytics","Analitik"]].map(([v,l])=>(
+          {[["patients","Hastalar"],["analytics","Analitik"]].map(([v,l])=>(
             <button key={v} onClick={()=>setTab(v)} style={{padding:"11px 18px",fontSize:13,fontWeight:500,letterSpacing:"0.06em",border:"none",background:"transparent",color:tab===v?"#1e3a5f":"#7b9ab5",borderBottom:tab===v?"1px solid #1e3a5f":"1px solid transparent",cursor:"pointer",transition:"all 0.15s",textTransform:"uppercase"}}>{l}</button>
           ))}
         </div>}
 
         {tab==="analytics"&&<Analytics patients={patients} avgRevenue={avgRevenue}/>}
-        {tab==="secretary"&&<SecretaryView patients={patients} doctorId={doctor.id} doctor={doctor} isDemo={isDemo} onRefresh={loadPatients}/>}
         {tab==="value"&&<ValueScreen patients={patients} doctor={doctor}/>}
         {tab==="settings"&&<SettingsScreen doctor={doctor} onLogout={onLogout} showPw={showPw} setShowPw={setShowPw} newU={newU} setNewU={setNewU} newP={newP} setNewP={setNewP} newP2={newP2} setNewP2={setNewP2} pwErr={pwErr} setPwErr={setPwErr} saveNewCreds={saveNewCreds} confirmClear={confirmClear} setConfirmClear={setConfirmClear} clearAll={clearAll} clinicName={clinicName} setClinicName={setClinicName} clinicSaved={clinicSaved} saveClinicName={saveClinicName} thresholdMode={thresholdMode} setThresholdMode={setThresholdMode} avgRevenue={avgRevenue} setAvgRevenue={setAvgRevenue}/>}
         {tab==="patients"&&<div style={{flex:1,overflowY:"auto",padding:isMobile?"12px 12px 24px":"20px 28px 24px"}}>
@@ -2855,7 +2629,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           <div style={{display:"flex",borderTop:"1px solid #d4e1ef",background:"#f8fafd",flexShrink:0}}>
             {[
               {id:"patients",label:"Hastalar",icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>},
-              {id:"secretary",label:"Sekreter",icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>},
               {id:"analytics",label:"Analitik",icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>},
               {id:"settings",label:"Ayarlar",icon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>},
             ].map(({id,label,icon})=>(
