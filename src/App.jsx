@@ -4822,228 +4822,45 @@ Türkçe yaz.`}]
   const BORD="#1d4ed8";
   const BORD2="#2d5a8e";
 
+  // Kapanış ekranı — isim + cinsiyet hitabı
+  const patientName=(answers.name||"").split(" ")[0];
+  const honorific=lang==="tr"?(answers.gender==="Kadın"?" Hanım":answers.gender==="Erkek"?" Bey":""):"";
+
   if(submitted) return(
     <div style={{minHeight:"100vh",background:"#f8fafd",fontFamily:"'Nunito',sans-serif",display:"flex",flexDirection:"column"}}>
       {/* Header */}
       <div style={{padding:"16px 22px",display:"flex",alignItems:"center",justifyContent:"space-between",background:"#f8fafd",borderBottom:"1px solid #d4e1ef",flexShrink:0}}>
         <div style={{display:"flex",alignItems:"center",gap:7}}>
           <div style={{width:18,height:18,border:"1px solid #d4e1ef",borderRadius:4,display:"flex",alignItems:"center",justifyContent:"center"}}>
-            <div style={{width:5,height:5,background:BORD,borderRadius:"50%"}}/>
+            <div style={{width:5,height:5,background:accent,borderRadius:"50%"}}/>
           </div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"#1e3a5f",letterSpacing:"0.02em"}}>SculptAI</div>
         </div>
         <div style={{fontSize:11,color:"#7b9ab5",letterSpacing:"0.06em"}}>{doctorInfo?.clinic_name||(lang==="tr"?"Plastik Cerrahi Kliniği":"Plastic Surgery Clinic")}</div>
       </div>
 
-      {/* Scrollable content */}
-      <div style={{flex:1,overflowY:"auto",padding:"16px 18px 4px"}}>
+      {/* Content */}
+      <div style={{flex:1,display:"flex",flexDirection:"column",justifyContent:"center",padding:"40px 24px"}}>
+        <div style={{maxWidth:480,margin:"0 auto",textAlign:"center"}}>
 
-        {infoPage===0&&(<>
-          {/* HERO */}
-          <div style={{background:BORD,borderRadius:16,padding:"22px 20px",marginBottom:16,marginTop:14,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",bottom:-40,right:-40,width:140,height:140,borderRadius:"50%",background:"rgba(245,240,232,0.03)"}}/>
-            <div style={{width:34,height:34,borderRadius:"50%",border:"1px solid rgba(245,240,232,0.15)",display:"flex",alignItems:"center",justifyContent:"center",color:"rgba(245,240,232,0.5)",fontSize:14,marginBottom:14}}>✓</div>
-            <div style={{fontSize:11,letterSpacing:"0.18em",textTransform:"uppercase",color:"rgba(245,240,232,0.28)",marginBottom:8}}>{lang==="tr"?"Değerlendirme tamamlandı":"Assessment Complete"}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:30,fontWeight:300,color:"#f8fafd",lineHeight:1.15,marginBottom:8,letterSpacing:"-0.01em"}}>{lang==="tr"?<>Teşekkürler,<br/><em>iyi ki geldiniz.</em></>:<>Thank you,<br/><em>we're glad you're here.</em></>}</div>
-            <div style={{fontSize:13,color:"rgba(245,240,232,0.35)",lineHeight:1.7}}>{lang==="tr"?"Bilgileriniz alındı. Aşağıda size özel rehber ve prosedür bilgileri.":"Your information has been received. Find your personal guide and procedure details below."}</div>
+          <div style={{fontSize:42,marginBottom:20}}>✨</div>
+
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:32,fontWeight:300,color:"#1e3a5f",lineHeight:1.2,marginBottom:20,letterSpacing:"-0.01em"}}>
+            {lang==="tr"?"Teşekkür Ederiz":"Thank You"}
           </div>
 
-          {/* MARKA ELÇİSİ */}
-          {ambassadorCode&&(
-            <div style={{background:BORD,borderRadius:14,padding:"18px 16px",marginBottom:16,position:"relative",overflow:"hidden"}}>
-              <div style={{position:"absolute",top:-20,right:-20,width:80,height:80,borderRadius:"50%",background:"rgba(245,240,232,0.04)"}}/>
-
-              {/* Header */}
-              <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"rgba(245,240,232,0.28)",marginBottom:8}}>{lang==="tr"?"Marka Elçisi Programı":"Brand Ambassador Program"}</div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:300,color:"#f8fafd",lineHeight:1.2,marginBottom:8,letterSpacing:"-0.01em"}}>{lang==="tr"?<>Sizi aramızda<br/><em>görmekten mutluluk.</em></>:<>So glad to<br/><em>have you with us.</em></>}</div>
-              <div style={{fontSize:12,color:"rgba(245,240,232,0.42)",lineHeight:1.7,marginBottom:14}}>{PC.ambassadorMsg}</div>
-
-              {/* Kod + butonlar */}
-              <div style={{background:"rgba(245,240,232,0.07)",border:"1px solid rgba(245,240,232,0.1)",borderRadius:9,padding:"11px 13px",marginBottom:8}}>
-                <div style={{fontSize:9,color:"rgba(245,240,232,0.3)",letterSpacing:"0.12em",textTransform:"uppercase",marginBottom:3}}>{lang==="tr"?"Referans Kodunuz":"Your Referral Code"}</div>
-                <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,color:"#f8fafd",letterSpacing:"0.1em",fontWeight:300}}>{ambassadorCode}</div>
-              </div>
-
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:7}}>
-                <button onClick={()=>{
-                  const msg=lang==="tr"?`Merhaba! ${doctorInfo?.clinic_name||"Plastik Cerrahi Kliniği"}'nde konsültasyona gidiyorum ve çok güvendim. Seni de yönlendirmek istedim — formu doldurursan doktor seni çok daha hazırlıklı karşılıyor. İşte bağlantı: ${window.location.origin}/form/${doctorInfo?.id||""}%0AReferans kodum: ${ambassadorCode}`:`Hi! I'm going for a consultation at ${doctorInfo?.clinic_name||"Plastic Surgery Clinic"} and I feel very confident. I wanted to refer you — if you fill out the form, the doctor will be much better prepared for you. Here's the link: ${window.location.origin}/form/${doctorInfo?.id||""}%0AMy referral code: ${ambassadorCode}`;
-                  window.open(`https://wa.me/?text=${msg}`,"_blank");
-                }} style={{padding:"10px",background:"#25D366",border:"none",borderRadius:8,color:"white",fontSize:12,fontWeight:500,cursor:"pointer",fontFamily:"'Nunito',sans-serif",letterSpacing:"0.04em",display:"flex",alignItems:"center",justifyContent:"center",gap:5}}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/><path d="M12 0C5.373 0 0 5.373 0 12c0 2.123.554 4.116 1.528 5.845L0 24l6.335-1.508A11.93 11.93 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.853 0-3.601-.5-5.112-1.374l-.366-.217-3.76.896.951-3.666-.239-.379A9.946 9.946 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/></svg>
-                  {lang==="tr"?"WhatsApp'ta Paylaş":"Share on WhatsApp"}
-                </button>
-                <button onClick={()=>{
-                  navigator.clipboard?.writeText(`${window.location.origin}/form/${doctorInfo?.id||""} — ${lang==="tr"?"Referans":"Referral"}: ${ambassadorCode}`);
-                }} style={{padding:"10px",background:"rgba(245,240,232,0.08)",border:"1px solid rgba(245,240,232,0.15)",borderRadius:8,fontSize:12,color:"rgba(245,240,232,0.7)",cursor:"pointer",fontFamily:"'Nunito',sans-serif",letterSpacing:"0.04em"}}>
-                  {lang==="tr"?"Linki Kopyala":"Copy Link"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* KİŞİSEL REHBER */}
-          <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"0 0 8px 0"}}>{lang==="tr"?"Size Özel Rehber":"Your Personal Guide"}</div>
-          {guideLoading&&(
-            <div style={{background:"#eef3f9",border:"1px solid #d4e1ef",borderRadius:12,padding:"20px 16px",marginBottom:10,textAlign:"center"}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,color:"#7b9ab5",fontStyle:"italic",animation:"pulse 1.5s infinite"}}>{lang==="tr"?"Kişisel rehberiniz hazırlanıyor...":"Preparing your personal guide..."}</div>
-              <div style={{fontSize:12,color:"#d4e1ef",marginTop:6}}>{lang==="tr"?"Yapay zeka form cevaplarınızı analiz ediyor":"AI is analyzing your form responses"}</div>
-            </div>
-          )}
-          {personalGuide&&!guideLoading&&(()=>{
-            const sections=personalGuide.split(/\[([^\]]+)\]/).filter(s=>s.trim());
-            const parsed=[];
-            for(let i=0;i<sections.length;i+=2){
-              if(sections[i+1]) parsed.push({title:sections[i],body:sections[i+1].trim()});
+          <div style={{fontSize:15,color:"#7b9ab5",lineHeight:1.9,marginBottom:28}}>
+            {lang==="tr"
+              ?<>{patientName}{honorific}, formu tamamladığınız için teşekkür ederiz. Yanıtlarınız ekibimiz tarafından değerlendirilecek ve sizin için en uygun yaklaşım belirlenecektir.<br/><br/>Birçok hastamızın ortak noktası, karar vermeden önce doğru bilgiye ve güvenilir bir değerlendirmeye ihtiyaç duymasıdır. Bu nedenle ilk görüşmemizde tüm sorularınızı yanıtlayacak ve sizin için en uygun seçenekleri birlikte değerlendireceğiz.<br/><br/>Sizinle tanışmayı sabırsızlıkla bekliyoruz. 🌷</>
+              :<>Dear {patientName}, thank you for completing the form. Your answers will be reviewed by our team to determine the approach best suited to you.<br/><br/>Something most of our patients share is the need for accurate information and a trustworthy assessment before deciding. That's why, in our first consultation, we'll answer all your questions and explore the most suitable options together.<br/><br/>We look forward to meeting you. 🌷</>
             }
-            return(
-              <div style={{border:"1px solid #d4e1ef",borderRadius:12,overflow:"hidden",marginBottom:12}}>
-                {parsed.map((s,i)=>(
-                  <div key={i} style={{padding:"13px 15px",borderBottom:i<parsed.length-1?"1px solid #eef3f9":"none"}}>
-                    <div style={{fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:BORD2,fontWeight:500,marginBottom:5}}>{s.title}</div>
-                    <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,fontWeight:300,color:"#1e3a5f",lineHeight:1.8}}>{s.body}</div>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-
-          <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"14px 0 8px 0"}}>{lang==="tr"?"Seçtiğiniz Prosedür":"Your Procedure"}</div>
-          <div style={{border:"1px solid #d4e1ef",borderRadius:12,padding:15,marginBottom:12}}>
-            <div style={{fontSize:9,letterSpacing:"0.14em",textTransform:"uppercase",color:BORD2,marginBottom:5}}>◈ {lang==="tr"?PI.category:(CAT_EN[PI.category]||PI.category)}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:19,fontWeight:300,color:"#1e3a5f",marginBottom:6,letterSpacing:"-0.01em"}}>{lang==="tr"?(proc||"İşlem"):tProc(proc||"Procedure")}</div>
-            <div style={{fontSize:12,color:"#7b9ab5",lineHeight:1.65,marginBottom:11}}>{lang==="en"&&EN.procInfo?.[proc]?.desc ? EN.procInfo[proc].desc : PI.desc}</div>
-            {(()=>{const piStats=lang==="en"&&EN.procInfo?.[proc]?.stats?EN.procInfo[proc].stats:PI.stats;return(
-            <div style={{display:"flex",gap:5}}>
-              {piStats.map((s,i)=>(
-                <div key={i} style={{flex:1,background:"#eef3f9",borderRadius:7,padding:"8px 5px",textAlign:"center"}}>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,color:"#1e3a5f",lineHeight:1}}>{s.val}</div>
-                  <div style={{fontSize:8,color:"#7b9ab5",marginTop:3,letterSpacing:"0.08em",textTransform:"uppercase"}}>{s.lbl}</div>
-                </div>
-              ))}
-            </div>
-            );})()}
           </div>
 
-          {/* Sonraki adım */}
-          {/* TAMAMLAYICI İŞLEMLER */}
-          {crossSellSuggestions.length>0&&(
-            <>
-              <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"14px 0 8px 0"}}>{lang==="tr"?"Konsültasyonda Sorabilirsiniz":"You May Ask During Consultation"}</div>
-              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:12}}>
-                {crossSellSuggestions.map((s,i)=>(
-                  <div key={i} style={{border:"1px solid #d4e1ef",borderRadius:12,padding:"13px 15px",background:"#faf8f4"}}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6}}>
-                      <div style={{width:5,height:5,borderRadius:"50%",background:BORD2,flexShrink:0}}/>
-                      <div style={{fontFamily:"'Playfair Display',serif",fontSize:16,fontWeight:400,color:"#1e3a5f"}}>{lang==="en"?(EN.procs?.[s.proc]||s.proc):s.proc}</div>
-                    </div>
-                    <div style={{fontSize:12,color:"#7b9ab5",lineHeight:1.65}}>{s.why}</div>
-                  </div>
-                ))}
-                <div style={{fontSize:11,color:"#7b9ab5",lineHeight:1.5,padding:"0 2px"}}>{lang==="tr"?"Bu bilgiler yalnızca ön bilgilendirme amaçlıdır. Son karar konsültasyonunuzda doktorunuzla birlikte değerlendirilecektir.":"This information is for preliminary guidance only. The final decision will be made with your doctor during your consultation."}</div>
-              </div>
-            </>
-          )}
-
-          <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"0 0 8px 0"}}>{lang==="tr"?"Sonraki Adım":"Next Step"}</div>
-          <div style={{border:"1px solid #d4e1ef",borderRadius:12,padding:"13px 15px",display:"flex",alignItems:"center",gap:11,marginBottom:12}}>
-            <div style={{width:30,height:30,background:"#eef3f9",borderRadius:7,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,flexShrink:0}}>📋</div>
-            <div>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"#1e3a5f",marginBottom:1}}>{lang==="tr"?"Bilgileriniz doktorunuza iletildi":"Your information has been shared with your doctor"}</div>
-              <div style={{fontSize:12,color:"#7b9ab5",lineHeight:1.4}}>{lang==="tr"?`${doctorInfo?.name||"Doktorunuz"} konsültasyonunuza özel olarak hazırlanacak. Aşağıdaki bilgileri inceleyerek siz de hazırlanabilirsiniz.`:`${doctorInfo?.name||"Your doctor"} will prepare specifically for your consultation. Review the information below to prepare as well.`}</div>
-            </div>
-          </div>
-        </>)}
-
-        {infoPage===1&&(<>
-          {/* Kişiselleştirilmiş giriş — EN ÜSTTE */}
-          <div style={{background:"linear-gradient(135deg,#eef3f9,#e8e3d8)",border:"1px solid #d4e1ef",borderRadius:10,padding:"14px 16px",marginBottom:14}}>
-            <div style={{fontSize:11,letterSpacing:"0.15em",textTransform:"uppercase",color:"#7b9ab5",marginBottom:6,fontWeight:500}}>{lang==="tr"?"Size özel not":"A note for you"}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:300,color:"#1e3a5f",lineHeight:1.75,fontStyle:"italic"}}>{PC.recoveryIntro}</div>
+          <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"8px 22px",border:`1px solid ${accent}22`,borderRadius:24,fontSize:12,color:accent,background:`${accent}08`}}>
+            ✦ {doctorInfo?.clinic_name||(lang==="tr"?"Plastik Cerrahi Kliniği":"Plastic Surgery Clinic")}
           </div>
 
-          {/* Recovery timeline */}
-          <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:600,margin:"4px 0 10px 2px"}}>{lang==="tr"?"İyileşme takvimi":"Recovery Timeline"}</div>
-          <div style={{position:"relative",paddingLeft:16,marginBottom:14}}>
-            <div style={{position:"absolute",left:4,top:8,bottom:8,width:1,background:"linear-gradient(180deg,"+BORD+",rgba(74,21,32,0.08))"}}/>
-            {piTimeline.map((t,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"flex-start",gap:10,paddingBottom:10}}>
-                <div style={{width:9,height:9,borderRadius:"50%",flexShrink:0,marginTop:4,position:"relative",left:-16,marginRight:-6,border:"1.5px solid #f8fafd",background:BORD,opacity:1-i*0.18,zIndex:1}}/>
-                <div style={{flex:1,border:"1px solid #d4e1ef",borderRadius:9,padding:"9px 11px"}}>
-                  <div style={{fontSize:8,letterSpacing:"0.12em",textTransform:"uppercase",fontWeight:600,color:BORD2,marginBottom:2,opacity:1-i*0.15}}>{t.time}</div>
-                  <div style={{fontFamily:"'Playfair Display',serif",fontSize:14,color:"#1e3a5f",marginBottom:1}}>{t.title}</div>
-                  <div style={{fontSize:11,color:"#7b9ab5",lineHeight:1.55}}>{t.desc}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Prep tips */}
-          <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:600,margin:"0 0 8px 2px"}}>{lang==="tr"?"İşlem öncesi hazırlık":"Pre-procedure Preparation"}</div>
-          <div style={{background:"#f8fafd",border:"1px solid #d4e1ef",borderRadius:12,marginBottom:10,overflow:"hidden"}}>
-            <div style={{padding:"12px 14px",display:"flex",alignItems:"center",gap:10,background:"#f0fdf4"}}>
-              <div style={{fontSize:20}}>🌿</div>
-              <div>
-                <div style={{fontSize:13,fontWeight:600,color:"#065f46"}}>{lang==="tr"?"Bilmeniz gerekenler":"What you need to know"}</div>
-                <div style={{fontSize:12,color:"#6ee7b7",marginTop:1}}>{doctorInfo?.clinic_name||(lang==="tr"?"Plastik Cerrahi":"Plastic Surgery")} {lang==="tr"?"önerileri":"recommendations"}</div>
-              </div>
-            </div>
-            <div style={{padding:"10px 14px 12px",display:"flex",flexDirection:"column",gap:7,borderTop:"1px solid #eef3f9"}}>
-              {piPrep.map((p,i)=>(
-                <div key={i} style={{display:"flex",alignItems:"flex-start",gap:9,fontSize:13,color:"#2d5a8e",lineHeight:1.55}}>
-                  <div style={{width:16,height:16,borderRadius:4,background:"#ecfdf5",border:"1.5px solid #6ee7b7",display:"flex",alignItems:"center",justifyContent:"center",fontSize:9,color:"#059669",flexShrink:0,marginTop:1}}>✓</div>
-                  {p}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Kişiselleştirilmiş İyileşme */}
-          {recoveryText&&(
-            <>
-              <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:600,margin:"0 0 8px 2px"}}>{lang==="tr"?"İyileşme süreci":"Recovery Process"}</div>
-              <div style={{background:"#f8fafd",border:"1px solid #d4e1ef",borderRadius:12,padding:"14px 16px",marginBottom:10}}>
-                <div style={{fontSize:13,color:"#2d5a8e",lineHeight:1.8}}>{recoveryText}</div>
-              </div>
-            </>
-          )}
-
-          {/* Kişiselleştirilmiş Riskler */}
-          {riskText&&(
-            <>
-              <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"0 0 8px 0"}}>{lang==="tr"?"Bilinmesi Gerekenler":"Important Information"}</div>
-              <div style={{borderLeft:"1.5px solid "+BORD2,padding:"10px 12px",marginBottom:8}}>
-                <div style={{fontSize:13,fontWeight:500,color:"#1e3a5f",marginBottom:2}}>{PC.riskIntro}</div>
-                <div style={{fontSize:12,color:"#7b9ab5",lineHeight:1.65}}>{riskText}</div>
-              </div>
-            </>
-          )}
-
-          {/* Normal */}
-          {piNormal&&piNormal.length>0&&(
-            <>
-              <div style={{fontSize:11,letterSpacing:"0.16em",textTransform:"uppercase",color:"#7b9ab5",fontWeight:500,margin:"8px 0 8px 0"}}>{lang==="tr"?"Bunlar Normaldir":"These Are Normal"}</div>
-              {piNormal.map((n,i)=>(
-                <div key={i} style={{borderLeft:"1.5px solid #d4e1ef",padding:"8px 12px",marginBottom:6}}>
-                  <div style={{fontSize:12,color:"#7b9ab5",lineHeight:1.6}}>{n}</div>
-                </div>
-              ))}
-            </>
-          )}
-
-          {/* Disclaimer */}
-          <div style={{padding:"9px 11px",background:"#eef3f9",borderRadius:8,fontSize:11,color:"#7b9ab5",lineHeight:1.6,fontStyle:"italic",marginBottom:10}}>
-            {lang==="tr"?"Son karar her zaman hekiminize aittir. Bu bilgiler yalnızca ön bilgilendirme amaçlıdır.":"The final decision always belongs to your physician. This information is for preliminary guidance only."}
-          </div>
-        </>)}
-
-      </div>
-
-      {/* Bottom CTA */}
-      <div style={{padding:"10px 22px 22px",flexShrink:0,background:"#f8fafd",borderTop:"1px solid #d4e1ef"}}>
-        {infoPage===0
-          ?<button onClick={()=>setInfoPage(1)} style={{width:"100%",padding:13,background:BORD,border:"none",borderRadius:9,color:"#f8fafd",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Nunito',sans-serif",letterSpacing:"0.08em"}}>{lang==="tr"?"Hazırlık bilgilerini gör →":"View preparation info →"}</button>
-          :<button onClick={()=>{setSubmitted(false);setAnswers({});setCurrentQ(0);setInfoPage(0);}} style={{width:"100%",padding:13,background:BORD,border:"none",borderRadius:9,color:"#f8fafd",fontSize:13,fontWeight:500,cursor:"pointer",fontFamily:"'Nunito',sans-serif",letterSpacing:"0.08em"}}>{lang==="tr"?"Anladım, teşekkürler":"Got it, thanks"}</button>
-        }
+        </div>
       </div>
     </div>
   );
@@ -5082,8 +4899,10 @@ Türkçe yaz.`}]
         {currentQ===0&&(
           <div style={{textAlign:"center",marginBottom:32,paddingTop:8}} className="f1">
             <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 18px",border:`1px solid ${accent}33`,borderRadius:24,fontSize:12,letterSpacing:"0.22em",color:accent,marginBottom:18,textTransform:"uppercase",background:`${accent}11`}}>✦ {doctorInfo?.clinic_name||"Plastik Cerrahi Kliniği"}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:46,color:C.navy,marginBottom:12,fontWeight:300,lineHeight:1.1,letterSpacing:"-0.01em"}}>{lang==="tr"?"Hoş Geldiniz":"Welcome"}</div>
-            <div style={{fontSize:15,color:C.muted,lineHeight:1.85,maxWidth:420,margin:"0 auto",marginBottom:6}}>{lang==="tr"?"Bu kısa form, size en doğru ve güvenli planlama yapabilmemiz için beklentilerinizi anlamamıza yardımcı olur.":"This short form helps us understand your expectations so we can plan the best and safest approach for you."}</div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:42,color:C.navy,marginBottom:14,fontWeight:300,lineHeight:1.1,letterSpacing:"-0.01em"}}>{lang==="tr"?"Hoş Geldiniz":"Welcome"}</div>
+            <div style={{fontSize:14,color:C.muted,lineHeight:1.9,maxWidth:440,margin:"0 auto",marginBottom:8}}>{lang==="tr"
+              ?"Bu yolculuğunuzda bize yer verdiğiniz için mutluyuz. Sizi daha yakından tanıyabilmek ve size en uygun yaklaşımı sunabilmek için birkaç kısa sorumuz olacak. Ayıracağınız birkaç dakika, size daha kişisel ve özenli bir deneyim sunmamıza yardımcı olacak. Şimdiden teşekkür ederiz. \u{1F33F}"
+              :"We're glad you've chosen to include us in your journey. To get to know you better and offer the approach that's right for you, we have a few short questions. The few minutes you take will help us give you a more personal and attentive experience. Thank you in advance. \u{1F33F}"}</div>
             <div style={{fontSize:12,color:C.muted,marginTop:4}}>{lang==="tr"?(formMode==="short"?"~1 dakika sürer":"~3 dakika sürer"):(formMode==="short"?"~1 minute":"~3 minutes")}</div>
           </div>
         )}
