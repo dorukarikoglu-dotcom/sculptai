@@ -3705,17 +3705,16 @@ Türkçe yaz.`}]
             <div style={{fontSize:14,color:C.muted,lineHeight:1.9,maxWidth:440,margin:"0 auto",marginBottom:8}}>{lang==="tr"
               ?"Bu yolculuğunuzda bize yer verdiğiniz için mutluyuz. Sizi daha yakından tanıyabilmek ve size en uygun yaklaşımı sunabilmek için birkaç kısa sorumuz olacak. Ayıracağınız birkaç dakika, size daha kişisel ve özenli bir deneyim sunmamıza yardımcı olacak. Şimdiden teşekkür ederiz. \u{1F33F}"
               :"We're glad you've chosen to include us in your journey. To get to know you better and offer the approach that's right for you, we have a few short questions. The few minutes you take will help us give you a more personal and attentive experience. Thank you in advance. \u{1F33F}"}</div>
-            <div style={{fontSize:12,color:C.muted,marginTop:4}}>{lang==="tr"?(formMode==="short"?"~1 dakika sürer":"~3 dakika sürer"):(formMode==="short"?"~1 minute":"~3 minutes")}</div>
           </div>
         )}
         <div style={{display:"flex",gap:5,marginBottom:20,flexWrap:"wrap"}} className="f2">
-          {VISIBLE_SECTIONS.map((sec,i)=>(
-            <div key={sec} style={{padding:"3px 11px",borderRadius:20,fontSize:11,letterSpacing:"0.13em",textTransform:"uppercase",background:i===secIdx?"#eef3f9":"transparent",border:`1.5px solid ${i===secIdx?C.accent:C.border}`,color:i===secIdx?C.accent:C.muted,transition:"all 0.3s"}}>{tSec(sec)}</div>
+          {false&&VISIBLE_SECTIONS.map((sec,i)=>(
+            <div key={sec}/>
           ))}
         </div>
         <div style={{marginBottom:22}} className="f2">
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-            <span style={{fontSize:12,color:C.muted}}>{lang==="tr"?"SORU":"Q"} {currentQ+1} / {VISIBLE_QUESTIONS.length} <span style={{fontSize:10,opacity:0.6}}>· {lang==="tr"?`~${Math.max(1,Math.ceil((VISIBLE_QUESTIONS.length-currentQ)*0.18))} dk`:`~${Math.max(1,Math.ceil((VISIBLE_QUESTIONS.length-currentQ)*0.18))} min`}</span></span>
+            <span style={{fontSize:12,color:C.muted}}>{lang==="tr"?"SORU":"Q"} {currentQ+1} / {VISIBLE_QUESTIONS.length}</span>
             <div style={{display:"flex",gap:4}}>
               {[["tr","🇹🇷"],["en","🇬🇧"]].map(([l,flag])=>(
                 <button key={l} onClick={()=>setLang(l)} style={{padding:"2px 8px",borderRadius:6,border:`1px solid ${lang===l?"#1e3a5f":"#d4e1ef"}`,background:lang===l?"#1e3a5f":"transparent",color:lang===l?"white":"#7b9ab5",fontSize:14,cursor:"pointer"}}>{flag}</button>
@@ -3728,7 +3727,6 @@ Türkçe yaz.`}]
           </div>
         </div>
         <div style={{background:"#f8fafd",border:`1.5px solid ${C.border}`,borderRadius:14,padding:"24px 22px",marginBottom:14}} className="f3">
-          <div style={{fontSize:11,color:"#7b9ab5",letterSpacing:"0.2em",textTransform:"uppercase",marginBottom:9,fontWeight:400}}>{tSec(q.section)}</div>
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:300,color:C.navy,marginBottom:20,lineHeight:1.35,letterSpacing:"-0.01em"}}>{t(`q.${q.id}.label`,q.label)}</div>
           {q.type==="text"&&<input type="text" placeholder={q.placeholder} value={answers[q.id]||""} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} style={{width:"100%",padding:"12px 14px",background:"#eef3f9",border:`1.5px solid ${C.border}`,borderRadius:10,color:C.navy,fontSize:15,outline:"none"}}/>}
           {q.type==="number"&&<input type="number" placeholder={q.placeholder} value={answers[q.id]||""} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} style={{width:"100%",padding:"12px 14px",background:"#eef3f9",border:`1.5px solid ${C.border}`,borderRadius:10,color:C.navy,fontSize:15,outline:"none"}}/>}
