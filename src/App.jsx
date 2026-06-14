@@ -121,7 +121,62 @@ function getEffectiveThreshold(baseThreshold, mode) {
   return Math.max(30, Math.min(85, baseThreshold + m.offset));
 }
 
-/* ─── ML SİSTEMİ v5 — 83 etiketli hasta, CV: 0.791 ─────────────── */
+/* ─── ML SİSTEMİ v6b — 4 temiz feature, 93 etiketli hasta, CV bal.acc: 0.675 ── */
+/* Features: revizyon, riskBilgisi, oncekiAmeliyat, prosedurRiski               */
+/* Ampirik yön doğrulanmış, bootstrap %90+ stabil, confounding yok              */
+const V6B_WEIGHTS = {
+  intercept: 0.1562403721807126,
+  coef: [
+    -0.336796400293243,   // revizyon
+    -0.7371948513506076,  // riskBilgisi
+    -0.2951358415849597,  // oncekiAmeliyat
+    -0.32471527705197634, // prosedurRiski
+  ],
+  mean: [0.41612903225806464, 0.5129032258064511, -0.16666666666666693, 0.3231182795698923],
+  std:  [0.2878508882882087, 0.31219851916038655, 0.3070264369315946, 0.10174793326609557],
+};
+const V6B_THRESHOLD = 48; // Optimal F1 threshold for no-conv class
+
+function extractV6bFeatures(a) {
+  const m_rev = {
+    "Evet, ve olası revizyonu normal kabul ederim":0.0,
+    "Evet, olası revizyonu normal karşılarım":0.0,
+    "Revizyon ihtimali beni çok endişelendiriyor":0.5,
+    "Revizyon beni endişelendiriyor":0.45,
+    "Kusursuz sonuç bekliyorum":1.0,
+  }[a.revision] ?? 0.3;
+
+  const m_risk = {
+    "Detaylı araştırdım ve biliyorum":0.0,
+    "Genel olarak bilgi sahibiyim":0.4,
+    "Hiçbir bilgim yok":1.0,
+  }[a.riskKnowledge] ?? 0.5;
+
+  const m_prev = {
+    "Hayır":-0.3,"Evet ve memnunum":0.0,
+    "Evet ama beklentimi karşılamadı":0.7,"Evet ve hiç memnun değilim":1.0,
+  }[a.prevSurgery] ?? 0.0;
+
+  const m_proc = PROC_RISK_MAP[a.procedure] ?? 0.3;
+
+  return [m_rev, m_risk, m_prev, m_proc];
+}
+
+function computeV6bScore(a) {
+  const feats = extractV6bFeatures(a);
+  const W = V6B_WEIGHTS;
+  let logit = W.intercept;
+  feats.forEach((v, i) => {
+    const z = (v - W.mean[i]) / (W.std[i] || 1);
+    logit += W.coef[i] * z;
+  });
+  const prob = 1 / (1 + Math.exp(-logit));
+  const riskScore = Math.min(100, Math.round((1 - prob) * 100));
+  const mlSatisfaction = Math.round((1 - riskScore / 100) * 100);
+  return { riskScore, mlSatisfaction, prob };
+}
+
+/* ─── ML SİSTEMİ v5 (FALLBACK) — 15 feature, 83 etiketli hasta ─────────── */
 const GLOBAL_ML_WEIGHTS = {
   intercept: -0.19329336986517526,
   coef: {
@@ -454,7 +509,7 @@ function computeScoreWithModel(a, weights) {
 }
 
 
-function classify(score,a,threshold=60){
+function classify(score,a,threshold=V6B_THRESHOLD){
   // Marka elçisi — yeni sorular + düşük risk
   // ML tabanlı elçi skoru
   const ambassadorProb = computeAmbassadorScore(a, score);
@@ -634,11 +689,14 @@ function predictOutcomes(score, a){
 }
 
 
+/* ── Form soruları ──────────────────────────────────────────────────────────── */
+/* core:true → v6b skorlama için gerekli, short modda gösterilir              */
+/* core:false/undefined → sadece full modda gösterilir                         */
 const QUESTIONS=[
-  {id:"name",section:"Kişisel Bilgiler",label:"İsminiz ve Soyisminiz",type:"text",placeholder:"Ad Soyad"},
-  {id:"age",section:"Kişisel Bilgiler",label:"Kaç yaşındasınız?",type:"number",placeholder:"örn. 34"},
+  {id:"name",section:"Kişisel Bilgiler",label:"İsminiz ve Soyisminiz",type:"text",placeholder:"Ad Soyad",core:true},
+  {id:"age",section:"Kişisel Bilgiler",label:"Kaç yaşındasınız?",type:"number",placeholder:"örn. 34",core:true},
   {id:"gender",section:"Kişisel Bilgiler",label:"Cinsiyetiniz nedir?",type:"radio",options:["Kadın","Erkek","Belirtmek istemiyorum"]},
-  {id:"procedure",section:"İşlem Bilgisi",label:"Hangi işlemi yaptırmak istiyorsunuz?",type:"radio",options:["Meme Küçültme","Meme Büyütme (Silikon Protez ile)","Meme Dikleştirme","Meme Asimetrisinin Giderilmesi","Meme Onarımı (Kanser sonrası)","Doğumsal Meme Anomalisinin Düzeltilmesi","Jinekomasti","Burun Estetiği","Yüz Germe","Kaş Kaldırma","Üst Göz Kapağı Estetiği","Alt Göz Kapağı Estetiği","Yanak Estetiği (Bişektomi)","Kepçe Kulak Tedavisi","Yüz Yağ Enjeksiyonu","Botoks Uygulaması","Dolgu Uygulaması","Göz Altı Işık Dolgusu","Nano Yağ Enjeksiyonu","Mezoterapi","Karın Germe","Liposuction","Uyluk veya Kol germe","Popo estetiği","Genital Estetik","Labioplasti","Lazer Epilasyon","Lazer Dövme Silme","Cilt Yenileme (Rejuvenasyon)","Karbon Peeling","Lazer Leke Tedavisi","Lazer Saç Tedavisi"]},
+  {id:"procedure",section:"İşlem Bilgisi",label:"Hangi işlemi yaptırmak istiyorsunuz?",type:"radio",options:["Meme Küçültme","Meme Büyütme (Silikon Protez ile)","Meme Dikleştirme","Meme Asimetrisinin Giderilmesi","Meme Onarımı (Kanser sonrası)","Doğumsal Meme Anomalisinin Düzeltilmesi","Jinekomasti","Burun Estetiği","Yüz Germe","Kaş Kaldırma","Üst Göz Kapağı Estetiği","Alt Göz Kapağı Estetiği","Yanak Estetiği (Bişektomi)","Kepçe Kulak Tedavisi","Yüz Yağ Enjeksiyonu","Botoks Uygulaması","Dolgu Uygulaması","Göz Altı Işık Dolgusu","Nano Yağ Enjeksiyonu","Mezoterapi","Karın Germe","Liposuction","Uyluk veya Kol germe","Popo estetiği","Genital Estetik","Labioplasti","Lazer Epilasyon","Lazer Dövme Silme","Cilt Yenileme (Rejuvenasyon)","Karbon Peeling","Lazer Leke Tedavisi","Lazer Saç Tedavisi"],core:true},
 
   /* ── Cross-sell sinyalleri ── */
   {id:"otherAreas",section:"İşlem Bilgisi",label:"Bunun dışında vücudunuzda rahatsız olduğunuz başka bir bölge var mı?",type:"radio",options:["Hayır, sadece bu bölge","Evet, 1-2 bölge daha var ama önceliğim bu","Evet, birkaç bölge var, hepsini konuşmak isterim","Henüz bilmiyorum, doktorun önerilerine açığım"]},
@@ -653,8 +711,8 @@ const QUESTIONS=[
   {id:"bddScreen",section:"Motivasyon & Beklenti",label:"Görünümünüzle ilgili düşünceleriniz günlük yaşamınızı nasıl etkiliyor?",type:"radio",options:["Pek etkilemiyor, bazen düşünüyorum","Sıkça düşünüyorum ama hayatımı yönlendirmiyor","Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor","Tamamen ele geçirdi, kaçınma davranışlarım var"]},
 
   /* ── Karar Kalitesi ── */
-  {id:"prevSurgery",section:"Geçmiş Deneyimler",label:"Daha önce estetik bir işlem yaptırdınız mı?",type:"radio",options:["Hayır","Evet ve memnunum","Evet ama beklentimi karşılamadı","Evet ve hiç memnun değilim"]},
-  {id:"multiDoctor",section:"Geçmiş Deneyimler",label:"Bu konuyu daha önce başka doktorlarla görüştünüz mü?",type:"radio",options:["Hayır","1-2 doktorla görüştüm","Birçok doktorla görüştüm"]},
+  {id:"prevSurgery",section:"Klinik Geçmiş",label:"Daha önce estetik bir işlem yaptırdınız mı?",type:"radio",options:["Hayır","Evet ve memnunum","Evet ama beklentimi karşılamadı","Evet ve hiç memnun değilim"],core:true},
+  {id:"multiDoctor",section:"Klinik Geçmiş",label:"Bu konuyu daha önce başka doktorlarla görüştünüz mü?",type:"radio",options:["Hayır","1-2 doktorla görüştüm","Birçok doktorla görüştüm"]},
 
   /* ── Süreç Farkındalığı ── */
   {id:"decisionDuration",section:"Süreç Farkındalığı",label:"Bu işlemi yaptırmayı ne zamandır düşünüyorsunuz ve şu an nasıl hissediyorsunuz?",type:"radio",options:[
@@ -663,9 +721,9 @@ const QUESTIONS=[
     "1 yılı aşkın süredir düşünüyorum — artık harekete geçme zamanı",
     "Uzun süredir düşünüyorum ama hâlâ kararsız hissediyorum",
   ]},
-  {id:"riskKnowledge",section:"Süreç Farkındalığı",label:"Bu işlemin riskleri ve iyileşme süreci hakkında bilginiz ne düzeyde?",type:"radio",options:["Hiçbir bilgim yok","Genel olarak bilgi sahibiyim","Detaylı araştırdım ve biliyorum"]},
+  {id:"riskKnowledge",section:"Klinik Geçmiş",label:"Bu işlemin riskleri ve iyileşme süreci hakkında bilginiz ne düzeyde?",type:"radio",options:["Hiçbir bilgim yok","Genel olarak bilgi sahibiyim","Detaylı araştırdım ve biliyorum"],core:true},
   {id:"support",section:"Süreç Farkındalığı",label:"Yakın çevreniz bu kararınızı biliyor mu ve destekliyor mu?",type:"radio",options:["Evet, destekliyorlar","Biliyorlar ama kararsızlar","Karşılar","Kimseye söylemedim"]},
-  {id:"revision",section:"Süreç Farkındalığı",label:"Revizyon ihtimali olabileceğini biliyor musunuz?",type:"radio",options:["Evet, olası revizyonu normal karşılarım","Revizyon beni endişelendiriyor","Kusursuz sonuç bekliyorum"]},
+  {id:"revision",section:"Klinik Geçmiş",label:"Revizyon ihtimali olabileceğini biliyor musunuz?",type:"radio",options:["Evet, olası revizyonu normal karşılarım","Revizyon beni endişelendiriyor","Kusursuz sonuç bekliyorum"],core:true},
 
 
   /* ── Açık Uçlu ── */
@@ -973,7 +1031,7 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
   const [showConsultNote,setShowConsultNote]=useState(false);
   const a=patient.answers||{};
   const score=patient.risk_score||0;
-  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||60;
+  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||V6B_THRESHOLD;
   const effectiveThreshold=getEffectiveThreshold(clinicThreshold, mode||'balanced');
   const cls=classify(score,a,effectiveThreshold);
   const modelInfo=getActiveModelInfo(patient.doctor_id);
@@ -1682,7 +1740,7 @@ function PatientCard({patient,onDelete,isMobile,onConsult,mode}){
 function ConsultationMode({patient, onClose, mode}){
   const a=patient.answers||{};
   const score=patient.risk_score||0;
-  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||60;
+  const clinicThreshold=(clinicModelCache[patient.doctor_id]?.threshold)||V6B_THRESHOLD;
   const effectiveThreshold=getEffectiveThreshold(clinicThreshold, mode||'balanced');
   const cls=classify(score,a,effectiveThreshold);
   const pred=predictOutcomes(score,a);
@@ -3652,6 +3710,7 @@ function PatientForm({doctorId}){
       "Kendinizi Tanıyın":"About Yourself",
       "Karar Süreci":"Decision Process",
       "Geçmiş Deneyimler":"Past Experiences",
+      "Klinik Geçmiş":"Clinical History",
       "Süreç Farkındalığı":"Process Awareness",
       "Hasta Profili":"Patient Profile",
       "İletişim":"Contact",
@@ -4361,20 +4420,28 @@ function PatientForm({doctorId}){
   const [questionTimes,setQuestionTimes]=useState({});
   const [questionChanges,setQuestionChanges]=useState({});
   const qStartTime=useRef(Date.now());
-  // Doktora özel prosedür listesi — enabled_procedures tanımlıysa sadece onlar gösterilir
+  // Doktora özel prosedür listesi ve form modu
   const doctorProcs=doctorInfo?.enabled_procedures;
+  const formMode=doctorInfo?.form_mode||"short"; // "short" = 6 çekirdek soru, "full" = tüm sorular
   const DYNAMIC_QUESTIONS=QUESTIONS.map(q=>
     q.id==="procedure"&&doctorProcs&&doctorProcs.length>0
       ?{...q,options:q.options.filter(o=>doctorProcs.includes(o))}
       :q
   );
-  const VISIBLE_QUESTIONS=DYNAMIC_QUESTIONS.filter(q=>!q.showIf||q.showIf(answers));
+  const VISIBLE_QUESTIONS=DYNAMIC_QUESTIONS.filter(q=>{
+    // showIf koşulu varsa kontrol et
+    if(q.showIf&&!q.showIf(answers)) return false;
+    // short modda sadece core sorular
+    if(formMode==="short"&&!q.core) return false;
+    return true;
+  });
   const q=VISIBLE_QUESTIONS[currentQ];
   const canNext=(q?.optional||answers[q?.id]!==undefined&&answers[q?.id]!=="")&&
     !(q?.id==="referralCode"&&answers["source"]!=="Bir hasta beni yönlendirdi (referans kodu var)"&&!answers[q?.id])
     ||(q?.id==="referralCode");
   const progress=(currentQ/VISIBLE_QUESTIONS.length)*100;
-  const secIdx=SECTIONS.indexOf(q?.section);
+  const VISIBLE_SECTIONS=[...new Set(VISIBLE_QUESTIONS.map(q=>q.section))];
+  const secIdx=VISIBLE_SECTIONS.indexOf(q?.section);
   const accent=doctorInfo?.primary_color||"#1e3a5f";
   const C={bg:"#f8fafd",accent:accent,navy:"#1e3a5f",muted:"#7b9ab5",border:"#d4e1ef"};
 
@@ -4382,7 +4449,7 @@ function PatientForm({doctorId}){
     if(!doctorId) return;
     const isUUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(doctorId);
     const col=isUUID?"id":"username";
-    sb.from("doctors").select("id,name,clinic_name,photo_url,primary_color,enabled_procedures").eq(col,doctorId).maybeSingle()
+    sb.from("doctors").select("id,name,clinic_name,photo_url,primary_color,enabled_procedures,form_mode").eq(col,doctorId).maybeSingle()
       .then(({data})=>{ if(data){ setDoctorInfo(data); if(!isUUID) setDoctorId(data.id); } });
   },[doctorId]);
 
@@ -4410,23 +4477,28 @@ function PatientForm({doctorId}){
     if(submitting) return; // çift gönderim engeli
     setSubmitting(true);
     setSubmitError("");
-    // Klinik bazlı model varsa onu kullan, yoksa global model
-    let score, mlSat, modelSource="global";
+    // Skorlama: v6b (4 feature) primary → klinik modeli → v5 fallback
+    let score, mlSat, modelSource="global_v6b";
     try {
+      // 1. v6b — 4 temiz feature, ampirik doğrulanmış
+      const v6bResult = computeV6bScore(answers);
+      score = v6bResult.riskScore;
+      mlSat = v6bResult.mlSatisfaction;
+
+      // 2. Klinik modeli varsa blend et (klinik %30 + v6b %70)
       const clinicModel = await loadClinicModel(doctorId);
       if(clinicModel && clinicModel.weights) {
-        score = Math.round(computeScoreWithModel(answers, clinicModel.weights));
+        const clinicScore = Math.round(computeScoreWithModel(answers, clinicModel.weights));
+        score = Math.round(score * 0.70 + clinicScore * 0.30);
         mlSat = Math.round((1 - score/100) * 100);
-        modelSource = `clinic_v${clinicModel.version||1}`;
-      } else {
-        const mlResult = computeMLScore(answers);
-        score = mlResult.riskScore;
-        mlSat = mlResult.mlSatisfaction;
+        modelSource = `v6b+clinic_v${clinicModel.version||1}`;
       }
     } catch(e) {
+      // v5 fallback
       const mlResult = computeMLScore(answers);
       score = mlResult.riskScore;
       mlSat = mlResult.mlSatisfaction;
+      modelSource = "global_v5_fallback";
     }
     const cls=classify(score,answers);
     const ambCode=cls.ambassador?"REF-"+Math.random().toString(36).substr(2,4).toUpperCase():null;
@@ -5002,11 +5074,11 @@ Türkçe yaz.`}]
             <div style={{display:"inline-flex",alignItems:"center",gap:8,padding:"5px 18px",border:`1px solid ${accent}33`,borderRadius:24,fontSize:12,letterSpacing:"0.22em",color:accent,marginBottom:18,textTransform:"uppercase",background:`${accent}11`}}>✦ {doctorInfo?.clinic_name||"Plastik Cerrahi Kliniği"}</div>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:46,color:C.navy,marginBottom:12,fontWeight:300,lineHeight:1.1,letterSpacing:"-0.01em"}}>{lang==="tr"?"Hoş Geldiniz":"Welcome"}</div>
             <div style={{fontSize:15,color:C.muted,lineHeight:1.85,maxWidth:420,margin:"0 auto",marginBottom:6}}>{lang==="tr"?"Bu kısa form, size en doğru ve güvenli planlama yapabilmemiz için beklentilerinizi anlamamıza yardımcı olur.":"This short form helps us understand your expectations so we can plan the best and safest approach for you."}</div>
-            <div style={{fontSize:12,color:C.muted,marginTop:4}}>{lang==="tr"?"~3 dakika sürer":"~3 minutes"}</div>
+            <div style={{fontSize:12,color:C.muted,marginTop:4}}>{lang==="tr"?(formMode==="short"?"~1 dakika sürer":"~3 dakika sürer"):(formMode==="short"?"~1 minute":"~3 minutes")}</div>
           </div>
         )}
         <div style={{display:"flex",gap:5,marginBottom:20,flexWrap:"wrap"}} className="f2">
-          {SECTIONS.map((sec,i)=>(
+          {VISIBLE_SECTIONS.map((sec,i)=>(
             <div key={sec} style={{padding:"3px 11px",borderRadius:20,fontSize:11,letterSpacing:"0.13em",textTransform:"uppercase",background:i===secIdx?"#eef3f9":"transparent",border:`1.5px solid ${i===secIdx?C.accent:C.border}`,color:i===secIdx?C.accent:C.muted,transition:"all 0.3s"}}>{tSec(sec)}</div>
           ))}
         </div>
