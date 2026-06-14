@@ -2242,12 +2242,9 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
 
   // Anlamlı KPI hesapları
   const total=patients.length;
-  // Persentil bantları — kliniğin kendi skor dağılımından
-  const scoreBands=(()=>{
-    const scores=patients.map(p=>p.risk_score||0).sort((a,b)=>a-b);
-    if(scores.length<3) return {p33:V6B_THRESHOLD*0.65, p67:V6B_THRESHOLD}; // fallback
-    return {p33:scores[Math.floor(scores.length/3)], p67:scores[Math.floor(2*scores.length/3)]};
-  })();
+  // Conversion-based bantlar — Hacettepe verisinden doğrulanmış doğal kırılma noktaları
+  // Skor <50 → %84 conversion (yeşil), 50-59 → %44-57 (sarı), ≥60 → %33-40 (kırmızı)
+  const scoreBands={p33:50, p67:60};
   const kritik=patients.filter(p=>{const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);return c.cat==="red";}).length;
   const randevuAlan=patients.filter(p=>p.outcome_procedures?.length>0).length;
   const donusum=total?Math.round(randevuAlan/total*100):0;
