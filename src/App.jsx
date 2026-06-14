@@ -80,46 +80,6 @@ document.head.appendChild(SE);
 /* ─── ML AĞIRLIKLARI (pipeline'dan üretildi, outcome verisi arttıkça güncellenir) ── */
 
 /* ─── THRESHOLD MODES ───────────────────────────────────────────────────── */
-const THRESHOLD_MODES = {
-  conservative: {
-    key: "conservative",
-    label: "Temkinli",
-    icon: "🎯",
-    description: "Az kırmızı, yüksek isabet",
-    offset: +15,   // base threshold'a eklenir
-    color: "#059669",
-    bg: "#ecfdf5",
-    border: "#a7f3d0",
-    hint: "Kırmızı deyince %90 haklısın. Az yanlış alarm.",
-  },
-  balanced: {
-    key: "balanced",
-    label: "Dengeli",
-    icon: "⚖️",
-    description: "Varsayılan mod",
-    offset: 0,
-    color: "#1d4ed8",
-    bg: "#eff6ff",
-    border: "#dbeafe",
-    hint: "Risk ve isabet dengeli. Çoğu klinik için ideal.",
-  },
-  aggressive: {
-    key: "aggressive",
-    label: "Agresif",
-    icon: "🔍",
-    description: "Daha fazla risk yakalar",
-    offset: -15,  // base threshold'u düşürür → daha fazla kırmızı
-    color: "#dc2626",
-    bg: "#fef2f2",
-    border: "#fecaca",
-    hint: "Daha fazla hasta kırmızı. Kaçırma azalır ama yanlış alarm artar.",
-  },
-};
-
-function getEffectiveThreshold(baseThreshold, mode) {
-  const m = THRESHOLD_MODES[mode] || THRESHOLD_MODES.balanced;
-  return Math.max(30, Math.min(85, baseThreshold + m.offset));
-}
 
 /* ─── ML SİSTEMİ v6b — 4 temiz feature, 93 etiketli hasta, CV bal.acc: 0.675 ── */
 /* Features: revizyon, riskBilgisi, oncekiAmeliyat, prosedurRiski               */
@@ -933,7 +893,7 @@ ${a.openStory ? `<div class="section"><div class="section-title">Hastanın Kendi
 }
 
 /* ─── PATIENT CARD ───────────────────────────────────────────────────────── */
-function PatientCard({patient,onDelete,isMobile,mode,scoreBands}){
+function PatientCard({patient,onDelete,isMobile,scoreBands}){
   const [open,setOpen]=useState(false);
   const [rendered,setRendered]=useState(false);
   const [cardError,setCardError]=useState(false);
@@ -1475,7 +1435,7 @@ function ApiKeysPanel({doctorId,cardS,C}){
 }
 
 /* ─── SETTINGS SCREEN ────────────────────────────────────────────────────── */
-function SettingsScreen({doctor,onLogout,newU,setNewU,newP,setNewP,newP2,setNewP2,pwErr,setPwErr,saveNewCreds,confirmClear,setConfirmClear,clearAll,clinicName,setClinicName,clinicSaved,saveClinicName,thresholdMode,setThresholdMode,avgRevenue,setAvgRevenue}){
+function SettingsScreen({doctor,onLogout,newU,setNewU,newP,setNewP,newP2,setNewP2,pwErr,setPwErr,saveNewCreds,confirmClear,setConfirmClear,clearAll,clinicName,setClinicName,clinicSaved,saveClinicName,avgRevenue,setAvgRevenue}){
   const C={border:"#d4e1ef",muted:"#7b9ab5"};
   const cardS={background:"#eef3f9",border:"1px solid #d4e1ef",borderRadius:10,padding:"18px 20px",marginBottom:12};
   const [enabledProcs,setEnabledProcs]=useState(doctor.enabled_procedures||ALL_PROCEDURE_LIST);
@@ -1501,30 +1461,6 @@ function SettingsScreen({doctor,onLogout,newU,setNewU,newP,setNewP,newP2,setNewP
   return(
     <div style={{flex:1,overflowY:"auto",padding:"24px 32px",maxWidth:520}}>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:34,fontWeight:300,color:"#1e3a5f",marginBottom:24,letterSpacing:"-0.01em"}}>Ayarlar</div>
-
-      {/* THRESHOLD MODE */}
-      <div style={cardS}>
-        <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:C.muted,marginBottom:4,fontWeight:500}}>Risk Hassasiyeti</div>
-        <div style={{fontSize:12,color:C.muted,marginBottom:14}}>Sistmin kaç hastayı kırmızı işaretleyeceğini belirler.</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(100px,1fr))",gap:8,marginBottom:12}}>
-          {Object.values(THRESHOLD_MODES).map(m=>(
-            <button key={m.key} onClick={()=>{setThresholdMode(m.key);localStorage.setItem('threshold_mode',m.key);}}
-              style={{padding:"12px 8px",borderRadius:10,border:`2px solid ${thresholdMode===m.key?m.color:C.border}`,
-                background:thresholdMode===m.key?m.bg:"white",cursor:"pointer",textAlign:"center"}}>
-              <div style={{fontSize:20,marginBottom:4}}>{m.icon}</div>
-              <div style={{fontSize:12,fontWeight:500,color:thresholdMode===m.key?m.color:"#1e3a5f"}}>{m.label}</div>
-              <div style={{fontSize:10,color:C.muted,marginTop:2,lineHeight:1.3}}>{m.description}</div>
-            </button>
-          ))}
-        </div>
-        <div style={{fontSize:11,color:"#2d5a8e",background:THRESHOLD_MODES[thresholdMode||"balanced"].bg,
-          border:`1px solid ${THRESHOLD_MODES[thresholdMode||"balanced"].border}`,
-          borderRadius:7,padding:"8px 12px",lineHeight:1.6}}>
-          <strong style={{color:THRESHOLD_MODES[thresholdMode||"balanced"].color}}>
-            {THRESHOLD_MODES[thresholdMode||"balanced"].label}:
-          </strong> {THRESHOLD_MODES[thresholdMode||"balanced"].hint}
-        </div>
-      </div>
 
       {/* PROSEDÜR SEÇİMİ */}
       <div style={cardS}>
@@ -1876,7 +1812,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
   const [loading,setLoading]=useState(!isDemo);
   const [filter,setFilter]=useState("all");
   const [search,setSearch]=useState("");
-  const [thresholdMode,setThresholdMode]=useState(()=>localStorage.getItem('threshold_mode')||'balanced');
   const [tab,setTab]=useState("patients"); // patients | analytics | value | settings
   const [isMobile,setIsMobile]=useState(window.innerWidth<768);
   const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
@@ -2042,14 +1977,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           </div>
           {/* Sağ butonlar */}
           <div style={{display:"flex",alignItems:"center",gap:8}}>
-            {isMobile&&(
-              <button onClick={()=>setTab("settings")} title="Ayarlar"
-                style={{padding:"6px 10px",borderRadius:7,fontSize:11,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",display:"flex",alignItems:"center",gap:4}}>
-                <span style={{fontSize:13}}>{THRESHOLD_MODES[thresholdMode||"balanced"].icon}</span>
-                <span style={{fontWeight:500,color:THRESHOLD_MODES[thresholdMode||"balanced"].color}}>{THRESHOLD_MODES[thresholdMode||"balanced"].label}</span>
-              </button>
-            )}
-            {!isMobile&&<button onClick={()=>setTab("settings")} style={{padding:"6px 13px",borderRadius:7,fontSize:13,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",letterSpacing:"0.03em"}}>Ayarlar</button>}
+            <button onClick={()=>setTab("settings")} style={{padding:"6px 13px",borderRadius:7,fontSize:13,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",letterSpacing:"0.03em"}}>Ayarlar</button>
             <div style={{width:32,height:32,borderRadius:"50%",background:"#1e3a5f",display:"flex",alignItems:"center",justifyContent:"center",fontSize:13,fontWeight:500,color:"#f8fafd",letterSpacing:"0.04em"}}>{doctor.name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase()}</div>
           </div>
         </div>
@@ -2063,7 +1991,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
 
         {tab==="analytics"&&<Analytics patients={patients} avgRevenue={avgRevenue}/>}
         {tab==="value"&&<ValueScreen patients={patients} doctor={doctor}/>}
-        {tab==="settings"&&<SettingsScreen doctor={doctor} onLogout={onLogout} showPw={showPw} setShowPw={setShowPw} newU={newU} setNewU={setNewU} newP={newP} setNewP={setNewP} newP2={newP2} setNewP2={setNewP2} pwErr={pwErr} setPwErr={setPwErr} saveNewCreds={saveNewCreds} confirmClear={confirmClear} setConfirmClear={setConfirmClear} clearAll={clearAll} clinicName={clinicName} setClinicName={setClinicName} clinicSaved={clinicSaved} saveClinicName={saveClinicName} thresholdMode={thresholdMode} setThresholdMode={setThresholdMode} avgRevenue={avgRevenue} setAvgRevenue={setAvgRevenue}/>}
+        {tab==="settings"&&<SettingsScreen doctor={doctor} onLogout={onLogout} showPw={showPw} setShowPw={setShowPw} newU={newU} setNewU={setNewU} newP={newP} setNewP={setNewP} newP2={newP2} setNewP2={setNewP2} pwErr={pwErr} setPwErr={setPwErr} saveNewCreds={saveNewCreds} confirmClear={confirmClear} setConfirmClear={setConfirmClear} clearAll={clearAll} clinicName={clinicName} setClinicName={setClinicName} clinicSaved={clinicSaved} saveClinicName={saveClinicName} avgRevenue={avgRevenue} setAvgRevenue={setAvgRevenue}/>}
         {tab==="patients"&&<div style={{flex:1,overflowY:"auto",padding:isMobile?"12px 12px 24px":"20px 28px 24px"}}>
           {showPw&&(
             <div style={{background:"#f8fafd",border:"1px solid #d4e1ef",borderRadius:12,padding:"16px 20px",marginBottom:18,animation:"fadeUp 0.25s ease"}}>
@@ -2112,16 +2040,6 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
                 <button key={v} onClick={()=>setFilter(v)} style={{padding:"4px 11px",borderRadius:20,fontSize:12,fontWeight:500,border:`1.5px solid ${filter===v?"#1e3a5f":"#d4e1ef"}`,background:filter===v?"#1e3a5f":"#f8fafd",color:filter===v?"#f8fafd":"#7b9ab5",transition:"all 0.15s",whiteSpace:"nowrap",flexShrink:0}}>{l}</button>
               ))}
               {isMobile&&<button onClick={()=>exportCSV(patients)} style={{padding:"4px 10px",borderRadius:20,fontSize:11,border:"1px solid #d4e1ef",background:"#eef3f9",color:"#2563eb",flexShrink:0,whiteSpace:"nowrap",cursor:"pointer"}}>CSV</button>}
-              <div onClick={()=>setTab("settings")} title="Ayarlardan değiştir" style={{
-                display:"flex",alignItems:"center",gap:3,padding:"3px 8px",borderRadius:20,cursor:"pointer",flexShrink:0,
-                background:THRESHOLD_MODES[thresholdMode||"balanced"].bg,
-                border:`1px solid ${THRESHOLD_MODES[thresholdMode||"balanced"].border}`,
-              }}>
-                <span style={{fontSize:10}}>{THRESHOLD_MODES[thresholdMode||"balanced"].icon}</span>
-                <span style={{fontSize:10,fontWeight:500,color:THRESHOLD_MODES[thresholdMode||"balanced"].color}}>
-                  {THRESHOLD_MODES[thresholdMode||"balanced"].label}
-                </span>
-              </div>
             </div>
           </div>
 
@@ -2138,7 +2056,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           {search.trim()&&(
             <div style={{fontSize:12,color:"#7b9ab5",marginBottom:8}}>"{search}" için {displayed.length} sonuç</div>
           )}
-          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} mode={thresholdMode} scoreBands={scoreBands}/>)}</div>
+          <div className="f4">{clinical.map(p=><PatientCard key={p.id} patient={p} onDelete={deletePatient} isMobile={isMobile} scoreBands={scoreBands}/>)}</div>
 
 
           {patients.length>0&&(
