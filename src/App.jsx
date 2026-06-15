@@ -658,8 +658,6 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
   const [outcomeProcedures,setOutcomeProcedures]=useState(patient.outcome_procedures||[]);
   const [noAppointment,setNoAppointment]=useState(patient.no_appointment||false);
   const [hadProcedure,setHadProcedure]=useState(patient.had_procedure??null);
-  const [procedureDate,setProcedureDate]=useState(patient.procedure_date||"");
-  const [showProcedure,setShowProcedure]=useState(false);
   const [consultNote,setConsultNote]=useState(patient.consult_note||"");
   const [showConsultNote,setShowConsultNote]=useState(false);
   const a=patient.answers||{};
@@ -725,15 +723,11 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
     } catch(e) { /* sessiz hata */ }
   }
 
-  async function saveProcedure(){
+  async function markConverted(){
     try{
-      const {error}=await sb.from("patients").update({
-        had_procedure: hadProcedure,
-        procedure_date: procedureDate||null,
-      }).eq("id",patient.id);
-      if(error) throw error;
-      setShowProcedure(false);
-    }catch{alert("Kayıt güncellenemedi. Tekrar deneyin.");}
+      await sb.from("patients").update({had_procedure:true}).eq("id",patient.id);
+      setHadProcedure(true);
+    }catch{alert("Kayıt güncellenemedi.");}
   }
 
   async function markNoAppointment(){
@@ -843,8 +837,8 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
                 {outcomeProcedures.length>0?"✓ Randevu":"Randevu al"}
               </button>
               {outcomeProcedures.length>0&&(
-                <button onClick={()=>{if(hadProcedure!==true){setHadProcedure(true);saveProcedure();}else setShowProcedure(v=>!v);}}
-                  style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:`1.5px solid ${hadProcedure===true?"#059669":"#d4e1ef"}`,background:hadProcedure===true?"#059669":"white",color:hadProcedure===true?"white":"#7b9ab5",cursor:"pointer"}}>
+                <button onClick={()=>{if(hadProcedure!==true)markConverted();}}
+                  style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:`1.5px solid ${hadProcedure===true?"#059669":"#d4e1ef"}`,background:hadProcedure===true?"#059669":"white",color:hadProcedure===true?"white":"#7b9ab5",cursor:hadProcedure===true?"default":"pointer"}}>
                   {hadProcedure===true?"✓ Dönüştü":"Dönüştür"}
                 </button>
               )}
@@ -888,34 +882,6 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
               </div>
             )}
 
-            {/* AMELİYAT OLDU MU? */}
-            {showProcedure&&(
-              <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #d4e1ef",padding:"16px",background:"#f0fdf4"}}>
-                <div style={{fontSize:11,letterSpacing:"0.12em",textTransform:"uppercase",color:"#059669",marginBottom:12,fontWeight:500}}>Ameliyat Sonucu</div>
-                <div style={{marginBottom:10}}>
-                  <div style={{fontSize:12,color:"#7b9ab5",marginBottom:6}}>Ameliyat gerçekleşti mi?</div>
-                  <div style={{display:"flex",gap:6}}>
-                    {[["true","✓ Evet, ameliyat oldu"],["false","✗ Vazgeçti"]].map(([v,l])=>(
-                      <button key={v} onClick={()=>setHadProcedure(v==="true")}
-                        style={{padding:"7px 14px",borderRadius:20,fontSize:12,border:`1px solid ${String(hadProcedure)===v?"#059669":"#d4e1ef"}`,background:String(hadProcedure)===v?"#059669":"transparent",color:String(hadProcedure)===v?"white":"#7b9ab5",cursor:"pointer"}}>
-                        {l}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {hadProcedure===true&&(
-                  <div style={{marginBottom:10}}>
-                    <div style={{fontSize:12,color:"#7b9ab5",marginBottom:6}}>Ameliyat tarihi (isteğe bağlı)</div>
-                    <input type="date" value={procedureDate} onChange={e=>setProcedureDate(e.target.value)}
-                      style={{padding:"6px 10px",borderRadius:7,border:"1px solid #d4e1ef",fontSize:12,color:"#1e3a5f"}}/>
-                  </div>
-                )}
-                <div style={{display:"flex",gap:8}}>
-                  <button onClick={saveProcedure} style={{padding:"8px 18px",background:"#059669",border:"none",borderRadius:7,color:"white",fontSize:13,fontWeight:500,cursor:"pointer"}}>Kaydet</button>
-                  <button onClick={()=>setShowProcedure(false)} style={{padding:"8px 14px",background:"transparent",border:"1px solid #d4e1ef",borderRadius:7,color:"#7b9ab5",fontSize:13,cursor:"pointer"}}>İptal</button>
-                </div>
-              </div>
-            )}
 
         </div>
       )}
