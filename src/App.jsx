@@ -376,19 +376,6 @@ function invalidateClinicModel(doctorId) {
   try { localStorage.removeItem(CLINIC_MODEL_LS_KEY(doctorId)); } catch(e) {}
 }
 
-function getActiveModelInfo(doctorId) {
-  const m = clinicModelCache[doctorId];
-  if(!m) return { source: "global", label: "Global Model", color: "#7b9ab5" };
-  return {
-    source: "clinic",
-    label: `Klinik Modeli v${m.version||1}`,
-    color: "#1d4ed8",
-    accuracy: m.val_accuracy || m.accuracy,
-    f1: m.val_f1,
-    trainDate: m.train_date || m.updated_at,
-    labelCount: m.label_count || m.n_train,
-  };
-}
 
 
 function computeScoreWithModel(a, weights) {
@@ -512,80 +499,6 @@ function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
   return{cat:"green",label:"Randevuya Hazır",icon:"🟢",color:"#059669",bg:"#ecfdf5",border:"#a7f3d0",textColor:"#047857",obs:"Profil uygun görünüyor",obsBody:"Gerçekçi beklenti ve süreç farkındalığı saptandı. Standart konsültasyon yeterli."};
 }
 
-function predictOutcomes(score, a){
-  // ── Sinyal tespiti ──────────────────────────────────────────────
-  const bddRisk      = a.bddScreen==="Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor"||a.bddScreen==="Tamamen ele geçirdi, kaçınma davranışlarım var"||a.bodyFocus==="Neredeyse her gün, bazen işimi gücümü etkiliyor"||a.avoidance==="Günlük hayatımı önemli ölçüde kısıtlıyor";
-  const bddModerate  = a.bddScreen==="Sıkça düşünüyorum ama hayatımı yönlendirmiyor";
-  const unrealistic  = a.revision==="Kusursuz sonuç bekliyorum";
-  const extMotiv     = ["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].some(x=>a.motivation===x);
-  const intMotiv     = ["Kendim için daha iyi hissetmek istiyorum","Özgüvenimi artırmak istiyorum"].some(x=>a.motivation===x);
-  const highExp      = a.expectation?.includes("Tamamen farklı");
-  const realisticExp = ["Küçük, doğal bir iyileştirme yeterli","Dengeli ve orantılı bir sonuç bekliyorum"].some(x=>a.expectation===x);
-  const manyDocs     = a.multiDoctor==="Birçok doktorla görüştüm";
-  const noSupport    = ["Kimseye söylemedim","Karşılar"].some(x=>a.support===x);
-  const goodSupport  = a.support==="Evet, destekliyorlar"||a.support==="Evet";
-  const prevBad      = ["Evet ama beklentimi karşılamadı","Evet ve hiç memnun değilim"].some(x=>a.prevSurgery===x);
-  const prevGood     = a.prevSurgery==="Evet ve memnunum";
-  const detailedKnow = a.riskKnowledge==="Detaylı araştırdım ve biliyorum";
-  const lowSelfEst   = ["Kendimden pek memnun değilim","Hayır, kendimle barışık değilim"].some(x=>a.selfEsteem===x);
-  const lifeExpect   = a.imagineAfter?.includes("Hayatımın daha iyi");
-  const hasOtherAreas= a.otherAreas&&a.otherAreas!=="Hayır, sadece bu bölge";
-
-  // ── Revizyon Riski % ───────────────────────────────────────────
-  let rev = 12;
-  const revReasons = [];
-  if(bddRisk)      { rev+=28; revReasons.push({txt:"BDD eğilimi saptandı — revizyon döngüsü olasılığı yüksek",w:"high"}); }
-  if(bddModerate)  { rev+=10; revReasons.push({txt:"Görünüm odağı orta düzeyde — beklenti çerçevesi dikkatli oluşturulmalı",w:"low"}); }
-  if(unrealistic)  { rev+=22; revReasons.push({txt:"Kusursuz sonuç beklentisi — gerçek sonuçla uyumsuzluk riski",w:"high"}); }
-  if(extMotiv)     { rev+=16; revReasons.push({txt:"Dışsal motivasyon — sonuç değerlendirmesi başkalarına bağımlı",w:"med"}); }
-  if(highExp)      { rev+=14; revReasons.push({txt:"Tamamen farklı görünüm beklentisi — hayal kırıklığı riski",w:"med"}); }
-  if(manyDocs)     { rev+=12; revReasons.push({txt:"Birçok doktora gidilmiş — kararsızlık ve yüksek standart",w:"med"}); }
-  if(prevBad)      { rev+=14; revReasons.push({txt:"Geçmiş deneyim memnuniyetsizliği — tekrar riski",w:"med"}); }
-  if(noSupport)    { rev+=8;  revReasons.push({txt:"Sosyal destek eksikliği — karar kırılganlığı artar",w:"low"}); }
-  if(lowSelfEst)   { rev+=6;  revReasons.push({txt:"Düşük benlik saygısı — sonuç algısını olumsuz etkileyebilir",w:"low"}); }
-  if(lifeExpect)   { rev+=8;  revReasons.push({txt:"İşlemden hayat değişikliği beklentisi — gerçekçi değil",w:"med"}); }
-  if(prevGood)     { rev-=8;  }
-  if(detailedKnow) { rev-=6;  }
-  if(intMotiv)     { rev-=5;  }
-  if(realisticExp) { rev-=8;  }
-  rev = Math.min(85, Math.max(5, rev));
-
-  // ── Cerrahi Uygunluk ──────────────────────────────────────────
-  const riskFactors = [bddRisk, highExp&&extMotiv, manyDocs, unrealistic, bddModerate&&extMotiv].filter(Boolean).length;
-  let fit, fitColor, fitBg;
-  if(bddRisk || (score>=60 && riskFactors>=3)){
-    fit="Genişletilmiş Değerlendirme"; fitColor="#dc2626"; fitBg="#fef2f2";
-  } else if(score>=45 || riskFactors>=2 || (extMotiv&&highExp) || (prevBad&&unrealistic)){
-    fit="Borderline"; fitColor="#d97706"; fitBg="#fffbeb";
-  } else {
-    fit="Uygun"; fitColor="#059669"; fitBg="#ecfdf5";
-  }
-
-  // ── Yaklaşım Önerisi ─────────────────────────────────────────
-  let approach, approachDesc;
-  if(fit==="Genişletilmiş Değerlendirme" || bddRisk){
-    approach="Psikolojik Ön Değerlendirme Önerilir";
-    approachDesc="Beklenti çerçevesi oluşturulmadan planlama önerilmez. Psikolojik ön değerlendirme düşünülmeli.";
-  } else if(fit==="Borderline" || extMotiv || unrealistic || highExp){
-    approach="Konservatif";
-    approachDesc="Minimal müdahale planla, beklenti yönetimini önceliklendir. Birden fazla konsültasyon düşün.";
-  } else if(intMotiv && realisticExp && !manyDocs && score<35){
-    approach="Standart / Agresif";
-    approachDesc="Hasta iyi aday. İstenen sonucu doğrudan hedefleyebilirsin.";
-  } else {
-    approach="Standart";
-    approachDesc="Normal konsültasyon akışı yeterli. Beklentileri teyit et, sonra planla.";
-  }
-
-  // ── Cross-sell potansiyeli ──────────────────────────────────────
-  let crossSellNote=null;
-  if(hasOtherAreas&&intMotiv&&!bddRisk&&score<50){
-    crossSellNote="Hasta birden fazla bölge ilgisi belirtti ve motivasyonu sağlıklı — konsültasyonda ek prosedür önerisi uygun olabilir.";
-  }
-
-  return { rev, fit, fitColor, fitBg, approach, approachDesc, revReasons, crossSellNote };
-}
-
 
 /* ── Form soruları ──────────────────────────────────────────────────────────── */
 /* core:true → v6b skorlama için gerekli, short modda gösterilir              */
@@ -630,43 +543,6 @@ const QUESTIONS=[
 ];
 const SECTIONS=[...new Set(QUESTIONS.map(q=>q.section))];
 
-function getFlags(a,cat){
-  const flags=[];
-  if(["Başka insanların yorumları beni kötü etkiliyor","Hayatımda büyük bir değişime ihtiyacım var"].includes(a.motivation)) flags.push("Dış kaynaklı motivasyon");
-  if(a.expectation==="Tamamen farklı görünmek istiyorum") flags.push("Yüksek beklenti düzeyi");
-  if(a.multiDoctor==="Birçok doktora danıştım") flags.push("Birden fazla doktor görüşmesi");
-
-  if(["Bu işleme karşılar","Kimseye söylemedim"].includes(a.support)) flags.push("Sosyal destek belirsiz");
-  if(a.revision==="Kusursuz sonuç bekliyorum") flags.push("Kusursuz sonuç beklentisi");
-  if(cat==="green"){
-    if(a.motivation==="Görünümümü iyileştirmek istiyorum") flags.push("İçsel motivasyon");
-    if(["Doğal ve dengeli bir sonuç bekliyorum","Küçük iyileştirmeler yeterli"].includes(a.expectation)) flags.push("Gerçekçi beklentiler");
-    if(a.support==="Evet") flags.push("Ailesi destekliyor");
-  }
-  return flags.slice(0,2);
-}
-
-function getSignals(a,cat){
-  // Açıklayıcı etiketler
-  const motShort={"Kendim için daha iyi hissetmek istiyorum":"Kendi kararı, içsel motivasyon ✓","Özgüvenimi artırmak istiyorum":"Özgüven artırmak istiyor","Yakınlarımın yorumları etkili oldu":"Çevre baskısı etkili ⚠","Hayatımın daha iyi gideceğini düşünüyorum":"Yaşam değişikliği bekliyor ⚠","Başka insanların yorumları beni kötü etkiliyor":"Dışsal baskı var ⚠"};
-  const expShort={"Küçük, doğal bir iyileştirme yeterli":"Doğal iyileştirme, gerçekçi ✓","Dengeli ve orantılı bir sonuç bekliyorum":"Dengeli sonuç bekliyor ✓","Belirgin bir fark olmasını istiyorum":"Belirgin fark istiyor","Tamamen farklı bir görünüm istiyorum":"Tam değişim bekliyor ⚠"};
-  const supShort={"Evet, destekliyorlar":"Ailesi destekliyor ✓","Biliyorlar ama kararsızlar":"Ailesi kararsız ⚠","Karşılar":"Ailesi karşı ⚠","Kimseye söylemedim":"Kimseye söylememiş ⚠"};
-  const docShort={"Hayır":"İlk konsültasyonu ✓","1-2 doktorla görüştüm":"1-2 doktor gördü","Birçok doktorla görüştüm":"Çok doktor gördü ⚠"};
-  const mot=motShort[a.motivation]||a.motivation||"—";
-  const exp=expShort[a.expectation]||a.expectation||"—";
-  const sup=supShort[a.support]||a.support||"—";
-  const doc=docShort[a.multiDoctor]||a.multiDoctor||"—";
-  if(cat==="red"||cat==="amber") return [
-    {label:"Motivasyon",val:mot},
-    {label:"Beklenti",val:exp},
-    {label:"Danıştığı Doktor",val:doc},
-  ];
-  return [
-    {label:"Motivasyon",val:mot},
-    {label:"Beklenti",val:exp},
-    {label:"Sosyal Destek",val:sup},
-  ];
-}
 
 function exportCSV(records){
   const H=["Tarih","İsim","Yaş","Cinsiyet","İşlem","Kaynak","Motivasyon","Beklenti","Önceki İşlem","Çok Doktor","Risk Bilgisi","Sabır","Destek","Revizyon","Uyum","Fiyat","Paylaşım","Çapraz Satış","Sosyal Etki","Tavsiye","Sosyal Medya","Risk Skoru","Segment"];
@@ -772,114 +648,6 @@ const DEMO_PATIENTS = [
 
 const DEMO_DOCTOR = {id:"demo",name:"Demo Kullanıcı",clinic_name:"Demo Klinik"};
 
-/* ─── KONSÜLTASYON PDF RAPORU ─────────────────────────────────────────── */
-function generateConsultPDF(patient, cls, pred, risks, comms, signals, modelInfo) {
-  const a = patient.answers || {};
-  const score = patient.risk_score || 0;
-  const date = patient.created_at ? new Date(patient.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"long",year:"numeric"}) : "";
-  const name = a.name || "İsimsiz Hasta";
-  const catColors = {red:"#dc2626",amber:"#d97706",green:"#059669"};
-  const catBgs = {red:"#fef2f2",amber:"#fffbeb",green:"#ecfdf5"};
-
-  const html = `<!DOCTYPE html><html lang="tr"><head><meta charset="UTF-8">
-<title>SculptAI — ${name}</title>
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,300;0,400;1,400&display=swap" rel="stylesheet">
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-@page{size:A4;margin:18mm 16mm 16mm 16mm}
-body{font-family:'Nunito',sans-serif;color:#1e3a5f;font-size:11px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1e3a5f;padding-bottom:12px;margin-bottom:16px}
-.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:300;color:#1e3a5f}
-.logo em{color:#1d4ed8;font-style:italic}
-.meta{text-align:right;font-size:9px;color:#7b9ab5;line-height:1.6}
-.patient-row{display:flex;gap:12px;margin-bottom:14px;align-items:stretch}
-.info-box{flex:1;background:#f8fafd;border:1px solid #d4e1ef;border-radius:8px;padding:10px 12px}
-.info-label{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:#7b9ab5;margin-bottom:3px}
-.info-val{font-size:13px;font-weight:500;color:#1e3a5f}
-.score-box{width:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:8px;padding:10px;border:2px solid ${catColors[cls.cat]||"#7b9ab5"};background:${catBgs[cls.cat]||"#f8fafd"}}
-.score-num{font-family:'Playfair Display',serif;font-size:32px;font-weight:300;color:${catColors[cls.cat]||"#1e3a5f"};line-height:1}
-.score-label{font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:${catColors[cls.cat]||"#7b9ab5"};margin-top:4px;text-align:center}
-.cat-strip{padding:8px 14px;border-radius:7px;margin-bottom:14px;display:flex;align-items:center;gap:10px;background:${catBgs[cls.cat]||"#f8fafd"};border:1px solid ${catColors[cls.cat]||"#d4e1ef"}33}
-.cat-icon{font-size:16px}
-.cat-text{font-size:12px;font-weight:600;color:${catColors[cls.cat]||"#1e3a5f"}}
-.cat-obs{font-size:11px;color:${catColors[cls.cat]||"#7b9ab5"};margin-left:4px;font-weight:400}
-.section{margin-bottom:12px}
-.section-title{font-size:9px;font-weight:700;letter-spacing:0.12em;text-transform:uppercase;color:#2d5a8e;margin-bottom:6px;padding-bottom:3px;border-bottom:1px solid #eef3f9}
-.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
-.metric-box{background:#f8fafd;border:1px solid #d4e1ef;border-radius:6px;padding:8px;text-align:center}
-.metric-num{font-family:'Playfair Display',serif;font-size:20px;line-height:1;margin-bottom:2px}
-.metric-label{font-size:8px;letter-spacing:0.08em;text-transform:uppercase;color:#7b9ab5}
-.item{font-size:11px;color:#1e3a5f;padding:4px 0;line-height:1.55;display:flex;gap:6px}
-.item-dot{flex-shrink:0;margin-top:2px;color:#dc2626}
-.item-arrow{flex-shrink:0;margin-top:2px;color:#059669}
-.approach-box{background:#f8f7ff;border:1px solid #ddd6fe;border-radius:7px;padding:10px 12px;margin-bottom:12px}
-.approach-title{font-size:13px;font-weight:600;color:#3730a3;margin-bottom:2px}
-.approach-desc{font-size:11px;color:#6d28d9;line-height:1.5}
-.footer{margin-top:20px;padding-top:8px;border-top:1px solid #d4e1ef;display:flex;justify-content:space-between;font-size:8px;color:#7b9ab5}
-.neden{background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:8px 10px;margin-bottom:12px}
-.neden-text{font-size:11px;color:#991b1b;line-height:1.55}
-@media print{body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
-</style></head><body>
-
-<div class="header">
-  <div><div class="logo">Sculpt<em>AI</em></div><div style="font-size:8px;color:#7b9ab5;letter-spacing:0.15em;text-transform:uppercase;margin-top:2px">Konsültasyon Brifing Raporu</div></div>
-  <div class="meta">${date}<br>${modelInfo.label} · Risk Skoru: ${score}/100</div>
-</div>
-
-<div class="patient-row">
-  <div class="info-box"><div class="info-label">Hasta</div><div class="info-val">${name}</div></div>
-  <div class="info-box"><div class="info-label">Yaş</div><div class="info-val">${a.age || "—"}</div></div>
-  <div class="info-box"><div class="info-label">İşlem</div><div class="info-val">${a.procedure || "—"}</div></div>
-  <div class="score-box"><div class="score-num">${score}</div><div class="score-label">Risk Skoru</div></div>
-</div>
-
-<div class="cat-strip">
-  <span class="cat-icon">${cls.icon}</span>
-  <span class="cat-text">${cls.label}</span>
-  <span class="cat-obs">— ${cls.obs}</span>
-</div>
-
-${cls.obsBody ? `<div class="neden"><div style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#dc2626;margin-bottom:3px;font-weight:700">Neden Bu Sınıflandırma?</div><div class="neden-text">${cls.obsBody}</div></div>` : ""}
-
-<div class="grid3">
-  <div class="metric-box"><div class="metric-num" style="color:${pred.rev>=50?"#dc2626":pred.rev>=30?"#d97706":"#059669"}">${pred.rev}%</div><div class="metric-label">Revizyon Riski</div></div>
-  <div class="metric-box"><div class="metric-num" style="color:${pred.fitColor};font-size:14px">${pred.fit}</div><div class="metric-label">Cerrahi Uygunluk</div></div>
-  <div class="metric-box"><div class="metric-num" style="color:#1d4ed8;font-size:14px">${signals.map(s=>s.val).join(" · ")}</div><div class="metric-label">Sinyaller</div></div>
-</div>
-
-<div class="approach-box">
-  <div style="font-size:8px;letter-spacing:0.1em;text-transform:uppercase;color:#8b5cf6;margin-bottom:4px;font-weight:700">Önerilen Yaklaşım</div>
-  <div class="approach-title">${pred.approach}</div>
-  <div class="approach-desc">${pred.approachDesc}</div>
-</div>
-
-${pred.revReasons && pred.revReasons.length > 0 ? `<div class="section"><div class="section-title">Tahmin Gerekçeleri</div>${pred.revReasons.slice(0,3).map(r=>`<div class="item"><span class="item-dot">↑</span>${r.txt}</div>`).join("")}</div>` : ""}
-
-<div class="section">
-  <div class="section-title">⚠ Risk Faktörleri</div>
-  ${risks.map(r=>`<div class="item"><span class="item-dot">·</span>${r}</div>`).join("")}
-</div>
-
-<div class="section">
-  <div class="section-title">💬 Konsültasyon Notları</div>
-  ${comms.map(c=>`<div class="item"><span class="item-arrow">→</span>${c}</div>`).join("")}
-</div>
-
-${a.openStory ? `<div class="section"><div class="section-title">Hastanın Kendi Anlatısı</div><div style="font-size:11px;color:#2d5a8e;line-height:1.6;background:#f8fafd;border:1px solid #d4e1ef;border-radius:6px;padding:8px 10px;font-style:italic">"${a.openStory}"</div></div>` : ""}
-
-<div class="footer">
-  <div>SculptAI Dönüşüm Zekası — Bu rapor otomatik olarak oluşturulmuştur.</div>
-  <div>Gizli · Sadece hekim kullanımı içindir</div>
-</div>
-
-<script>window.onload=function(){window.print();}</script>
-</body></html>`;
-
-  const w = window.open("", "_blank");
-  if(w) { w.document.write(html); w.document.close(); }
-  else { alert("PDF penceresi açılamadı. Tarayıcınızın popup engelleyicisini bu site için kapatın."); }
-}
-
 /* ─── PATIENT CARD ───────────────────────────────────────────────────────── */
 function PatientCard({patient,onDelete,isMobile,scoreBands}){
   const [open,setOpen]=useState(false);
@@ -897,14 +665,6 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
   const a=patient.answers||{};
   const score=patient.risk_score||0;
   const cls=classify(score,a,scoreBands?.p67||V6B_THRESHOLD,scoreBands||null);
-  const modelInfo=getActiveModelInfo(patient.doctor_id);
-  const flags=getFlags(a,cls.cat);
-  const signals=getSignals(a,cls.cat);
-  const storyLower=(a.openStory||"").toLowerCase();
-  const redKeywords=["mükemmel","kusursuz","herkes fark","herkes görsün","tamamen değiş","özgüvenim tamamen","hayatım değiş","bambaşka biri","tanınamaz","artık ben olam"];
-  const storyRedFlag=redKeywords.some(kw=>storyLower.includes(kw));
-  const rhinoRedFlag=a.procedure==="Burun Estetiği"&&a.rhinoVision==="Aklımda belirli bir referans var — bir ünlü veya fotoğraf";
-  const breastSymRedFlag=["Meme Küçültme","Meme Dikleştirme","Meme Büyütme (Silikon Protez ile)","Meme Asimetrisinin Giderilmesi"].includes(a.procedure)&&a.breastSymmetry==="Çok küçük bir fark var ama bu küçük fark bile beni rahatsız ediyor";
 
   const ALL_PROCS=["Burun Estetiği","Meme Küçültme","Meme Büyütme","Meme Dikleştirme","Karın Germe","Liposuction","Üst Göz Kapağı","Alt Göz Kapağı","Botoks","Dolgu","Kol Germe","Yüz Germe","Uyluk Germe","Popo Estetiği","Jinekomasti"];
 
@@ -993,48 +753,6 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
   }
 
 
-  function handlePDF(e){
-    e.stopPropagation();
-    try{
-    const name=a.name?.split(" ")[0]||"Hasta";
-    const proc=a.procedure||"işlem";
-    const risks=[];
-    if(a.multiDoctor?.includes("1-2")||a.multiDoctor?.includes("Birçok")) risks.push(`${name} daha önce ${a.multiDoctor?.includes("Birçok")?"birçok":"1-2"} doktora danışmış`);
-    if(a.motivation?.includes("Yakınlarımın yorumları")||a.motivation?.includes("Başka insanların")) risks.push("Dışsal baskıyla karar veriyor");
-    if(a.expectation?.includes("Tamamen farklı")) risks.push(`"Tamamen farklı görünmek" beklentisi ${proc} ile karşılanamayabilir`);
-    if(a.support?.includes("Kimseye söylemedim")) risks.push("Bu kararı tek başına veriyor — iyileşmede yalnız kalma riski");
-    if(a.revision?.includes("Kusursuz")) risks.push("Kusursuz sonuç beklentisi var — revizyon riski yüksek");
-    if(a.bddScreen?.includes("saatlerce")||a.bddScreen?.includes("ele geçirdi")||a.bodyFocus?.includes("işimi gücümü etkiliyor")) risks.push("Görünüm odaklanması günlük hayatı etkiliyor — BDD değerlendirmesi düşünülmeli");
-    if(a.prevSurgery?.includes("beklentimi karşılamadı")) risks.push("Önceki işlemden memnun değil — standartları daha yüksek");
-    if(a.prevSurgery?.includes("hiç memnun değilim")) risks.push("Önceki işlemden hiç memnun değil — yüksek riskli profil");
-    if(["Meme Asimetrisinin Giderilmesi"].includes(a.procedure)) risks.push("Meme asimetrisi vakaları yüksek beklenti riski taşıyor");
-    if(["Karın Germe","Yüz Germe"].includes(a.procedure)&&a.riskKnowledge==="Hiçbir bilgim yok") risks.push(`${a.procedure} için hiç bilgisi yok — süreç mutlaka anlatılmalı`);
-    if(a.procedure==="Burun Estetiği"&&["Yakınlarımın yorumları etkili oldu","Başka insanların yorumları beni kötü etkiliyor"].includes(a.motivation)) risks.push("Rinoplasti + dışsal motivasyon — bu kombinasyon çok yüksek risk");
-    if(storyRedFlag) risks.push("Açık cevabında yüksek beklenti sinyali var");
-    if(risks.length===0&&score>=68) risks.push("Profil kombinasyonu yüksek risk gösteriyor — form cevaplarının bütünü randevu almama ile ilişkili");
-    if(risks.length===0) risks.push("Belirgin risk sinyali saptanmadı — standart konsültasyon yeterli");
-
-    const comms=[];
-    const isAnalyst=a.riskKnowledge?.includes("Detaylı");
-    const isTrustSeeker=a.riskKnowledge?.includes("Hiçbir")||a.support?.includes("Kimseye");
-    if(isAnalyst){
-      comms.push(`Araştırmacı profil — teknik detayları paylaşmaktan çekinmeyin`);
-      comms.push(`${proc} için tercih ettiğiniz tekniği ve nedenini aktarın`);
-    } else if(isTrustSeeker){
-      comms.push(`Güven arayan profil — yargılanmayacağını hissettirin`);
-      comms.push("Riskleri liste halinde değil, nadir olduğunu vurgulayarak aktarın");
-    } else {
-      comms.push(`${name} motivasyonunu dinleyin, süreci güvenli hissettirin`);
-      if(a.imagineAfter?.includes("hayatımın daha iyi")||a.imagineAfter?.includes("Hayatımın")) comms.push("Hayat değişikliği beklentisi var — gerçekçi çerçeve oluşturun");
-    }
-
-    const pred=predictOutcomes(score,a);
-    generateConsultPDF(patient, cls, pred, risks, comms, signals, modelInfo);
-    }catch(err){
-      alert("PDF oluşturulamadı. Lütfen popup engelleyicinizi kontrol edin ve tekrar deneyin.");
-      console.error("PDF hatası:",err);
-    }
-  }
 
   const formProc=a.procedure||"";
   const crossSellDetected=outcomeProcedures.length>0&&!outcomeProcedures.every(p=>p===formProc);
@@ -1144,7 +862,6 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
 
           {/* Detay butonları */}
           <div onClick={e=>e.stopPropagation()} style={{borderTop:"1px solid #d4e1ef",padding:"10px 16px",display:"flex",gap:7,background:"#f8fafd",flexWrap:"wrap"}}>
-            <button onClick={handlePDF} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#2d5a8e",cursor:"pointer"}}>📄 PDF</button>
             {!confirm?<button onClick={e=>{e.stopPropagation();setConfirm(true);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"1px solid #d4e1ef",background:"transparent",color:"#7b9ab5",cursor:"pointer"}}>Sil</button>
             :<button onClick={e=>{e.stopPropagation();onDelete(patient.id);}} style={{padding:"8px 10px",borderRadius:7,fontSize:12,border:"none",background:"#ef4444",color:"white",fontWeight:500,cursor:"pointer"}}>Emin misin?</button>}
           </div>
