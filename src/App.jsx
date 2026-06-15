@@ -1221,47 +1221,143 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
 /* ─── CONSULTATION MODE ──────────────────────────────────────────────────── */
 function ValueScreen({patients,doctor}){
   const total=patients.length;
-  const crossSells=patients.filter(p=>p.outcome_procedures&&p.outcome_procedures.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
-  const noAppt=patients.filter(p=>p.no_appointment).length;
-  const withOutcome=patients.filter(p=>p.outcome_procedures?.length>0).length;
-  const donusum=total?Math.round(withOutcome/total*100):0;
-  const C={border:"#d4e1ef",muted:"#7b9ab5"};
-  const cardS={background:"#eef3f9",border:"1px solid #d4e1ef",borderRadius:10,padding:"16px 20px"};
+  const labeled=patients.filter(p=>p.no_appointment===true||p.outcome_procedures?.length>0||p.had_procedure===true);
+  const converted=patients.filter(p=>p.outcome_procedures?.length>0||p.had_procedure===true);
+  const donusum=labeled.length>0?Math.round(converted.length/labeled.length*100):0;
+  const noOutcome=total-labeled.length;
+  const OUTCOME_THRESHOLD=25;
+
+  // Segment dağılımı
+  const scoreBands={p33:50,p67:60};
+  const segCounts={red:0,amber:0,green:0};
+  patients.forEach(p=>{const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);segCounts[c.cat]=(segCounts[c.cat]||0)+1;});
+
+  // Kanal dağılımı
+  const srcMap={};
+  patients.forEach(p=>{const s=p.answers?.source||"Diğer";srcMap[s]=(srcMap[s]||0)+1;});
+  const sources=Object.entries(srcMap).sort((a,b)=>b[1]-a[1]);
+
+  // Prosedür dağılımı
+  const procMap={};
+  patients.forEach(p=>{const pr=p.answers?.procedure||"Diğer";procMap[pr]=(procMap[pr]||0)+1;});
+  const procs=Object.entries(procMap).sort((a,b)=>b[1]-a[1]).slice(0,6);
+
+  const C={border:"#d4e1ef",muted:"#7b9ab5",navy:"#1e3a5f"};
+  const card={background:"#f8fafd",border:"1px solid #d4e1ef",borderRadius:12,padding:16};
+
   return(
     <div style={{flex:1,overflowY:"auto",padding:"24px 32px"}}>
       <div style={{marginBottom:24}}>
-        <div style={{fontFamily:"'Playfair Display',serif",fontSize:34,fontWeight:300,color:"#1e3a5f",letterSpacing:"-0.01em",marginBottom:4}}>SculptAI'ın <em>Katkısı</em></div>
-        <div style={{fontSize:13,color:C.muted}}>{total} hasta · Gerçek veriye dayalı</div>
+        <div style={{fontFamily:"'Playfair Display',serif",fontSize:34,fontWeight:300,color:C.navy,letterSpacing:"-0.01em",marginBottom:4}}>Klinik Özeti</div>
+        <div style={{fontSize:13,color:C.muted}}>{total} lead · {labeled.length} sonuç girildi</div>
       </div>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(160px,1fr))",gap:12,marginBottom:20}}>
-        {[
-          {accent:"#059669",icon:"↗",title:"Cross-Sell",sub:"Ek prosedür planlanan",val:crossSells,unit:" hasta",note:total?`Hastaların %${Math.round(crossSells/total*100)}'inde`:"Veri yok",color:"#059669"},
-          {accent:"#1d4ed8",icon:"🛡",title:"Risk Filtresi",sub:"Randevu alınmadı",val:noAppt,unit:" hasta",note:noAppt>0?"Konsültasyon boşa gitmedi":"Henüz işaretlenmedi",color:"#1d4ed8"},
-          {accent:"#1e3a5f",icon:"📋",title:"Dönüşüm",sub:"Randevu girilmiş",val:withOutcome>0?`%${donusum}`:"—",unit:"",note:withOutcome>0?`${withOutcome}/${total} hasta`:"Outcome girilince hesaplanır",color:"#1e3a5f"},
-        ].map((k,i)=>(
-          <div key={i} style={{...cardS,position:"relative",overflow:"hidden"}}>
-            <div style={{position:"absolute",top:0,left:0,right:0,height:2,background:k.accent}}/>
-            <div style={{fontSize:17,marginBottom:8}}>{k.icon}</div>
-            <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:C.muted,marginBottom:4,fontWeight:500}}>{k.title}</div>
-            <div style={{fontSize:12,color:C.muted,marginBottom:10}}>{k.sub}</div>
-            <div style={{fontFamily:"'Playfair Display',serif",fontSize:40,fontWeight:300,fontVariantNumeric:"lining-nums",color:k.color,lineHeight:1,letterSpacing:"-0.02em",marginBottom:2}}>{k.val}<span style={{fontSize:16}}>{k.unit}</span></div>
-            <div style={{fontSize:12,fontWeight:500,color:k.color,marginTop:4}}>{k.note}</div>
+
+      {/* DÖNÜŞÜM — ana metrik */}
+      <div style={{...card,marginBottom:16,position:"relative",overflow:"hidden"}}>
+        <div style={{position:"absolute",top:0,left:0,right:0,height:3,background:"linear-gradient(90deg,#1e3a5f,#2d5a8e)"}}/>
+        <div style={{display:"flex",alignItems:"center",gap:20}}>
+          <div>
+            <div style={{fontFamily:"'Playfair Display',serif",fontSize:48,fontWeight:300,color:C.navy,lineHeight:1}}>{labeled.length>0?`%${donusum}`:"—"}</div>
+            <div style={{fontSize:12,color:C.muted,marginTop:4}}>Dönüşüm Oranı</div>
           </div>
-        ))}
+          <div style={{fontSize:13,color:C.muted,lineHeight:1.6,flex:1}}>
+            {labeled.length>0?`${converted.length} dönüşüm / ${labeled.length} sonuç girilmiş`:"Outcome girilince hesaplanır"}
+          </div>
+        </div>
       </div>
-      {crossSells>0&&(
-        <div style={{...cardS,marginBottom:12}}>
-          <div style={{fontSize:11,letterSpacing:"0.14em",textTransform:"uppercase",color:C.muted,marginBottom:12,fontWeight:500}}>Cross-Sell Detayı</div>
-          {patients.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).slice(0,5).map((p,i)=>(
-            <div key={i} style={{display:"flex",alignItems:"center",gap:12,paddingBottom:10,marginBottom:10,borderBottom:"1px solid #d4e1ef"}}>
-              <div style={{fontFamily:"'Playfair Display',serif",fontSize:15,color:"#1e3a5f",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.answers?.name||"Hasta"}</div>
-              <div style={{fontSize:12,color:C.muted,flexShrink:0}}>{p.answers?.procedure}</div>
-              <div style={{fontSize:12,color:C.muted,flexShrink:0}}>→</div>
-              <div style={{fontSize:12,color:"#059669",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{p.outcome_procedures.filter(x=>x!==p.answers?.procedure).join(", ")}</div>
+
+      {/* SEGMENT + KANAL */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+        <div style={card}>
+          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Segment Dağılımı</div>
+          {[
+            {label:"🟢 Yüksek potansiyel",count:segCounts.green,color:"#10b981"},
+            {label:"🟡 Orta",count:segCounts.amber,color:"#f59e0b"},
+            {label:"🔴 Dikkatli yaklaş",count:segCounts.red,color:"#ef4444"},
+          ].map(s=>(
+            <div key={s.label} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+              <div style={{fontSize:13,color:"#2d5a8e",width:140,flexShrink:0}}>{s.label}</div>
+              <div style={{flex:1,height:7,background:"#d4e1ef",borderRadius:4,overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:4,background:s.color,width:`${total?Math.round(s.count/total*100):0}%`}}/>
+              </div>
+              <div style={{fontSize:13,fontWeight:600,color:s.color,minWidth:22,textAlign:"right"}}>{s.count}</div>
+              <div style={{fontSize:12,color:C.muted,minWidth:28,textAlign:"right"}}>{total?Math.round(s.count/total*100):0}%</div>
             </div>
           ))}
         </div>
-      )}
+        <div style={card}>
+          <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Kanal Dağılımı</div>
+          {sources.map(([src,cnt])=>(
+            <div key={src} style={{display:"flex",alignItems:"center",gap:8,marginBottom:7}}>
+              <div style={{flex:1,fontSize:13,color:"#2d5a8e",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{src}</div>
+              <div style={{width:60,height:5,background:"#d4e1ef",borderRadius:3,overflow:"hidden",flexShrink:0}}>
+                <div style={{height:"100%",borderRadius:3,background:C.navy,width:`${Math.round(cnt/(sources[0]?.[1]||1)*100)}%`}}/>
+              </div>
+              <div style={{fontSize:13,fontWeight:600,color:C.navy,minWidth:20,textAlign:"right"}}>{cnt}</div>
+              <div style={{fontSize:12,color:C.muted,minWidth:28,textAlign:"right"}}>{Math.round(cnt/total*100)}%</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* PROSEDÜRLER */}
+      <div style={{...card,marginBottom:12}}>
+        <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Prosedür Dağılımı</div>
+        {procs.map(([name,count])=>(
+          <div key={name} style={{display:"flex",alignItems:"center",gap:8,paddingBottom:7,borderBottom:"1px solid #eef3f9",marginBottom:7}}>
+            <div style={{flex:1,fontSize:13,color:"#2d5a8e",whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{name}</div>
+            <div style={{width:70,height:5,background:"#d4e1ef",borderRadius:3,overflow:"hidden",flexShrink:0}}>
+              <div style={{height:"100%",borderRadius:3,background:"linear-gradient(90deg,#1e3a5f,#2d5a8e)",width:`${Math.round(count/(procs[0]?.[1]||1)*100)}%`}}/>
+            </div>
+            <div style={{fontSize:13,fontWeight:600,color:C.navy,minWidth:20,textAlign:"right"}}>{count}</div>
+            <div style={{fontSize:12,color:C.muted,minWidth:28,textAlign:"right"}}>{Math.round(count/total*100)}%</div>
+          </div>
+        ))}
+      </div>
+
+      {/* SEGMENT DOĞRULAMA — kilitli/açık */}
+      <div style={{...card,marginBottom:12,background:labeled.length>=OUTCOME_THRESHOLD?"#f8fafd":"#fffbeb",border:labeled.length>=OUTCOME_THRESHOLD?"1px solid #d4e1ef":"1px solid #fde68a"}}>
+        {labeled.length<OUTCOME_THRESHOLD?(
+          <div style={{textAlign:"center",padding:"12px 0"}}>
+            <div style={{fontSize:20,marginBottom:8}}>🔒</div>
+            <div style={{fontSize:14,fontWeight:600,color:"#92400e",marginBottom:6}}>Segment Doğrulama</div>
+            <div style={{fontSize:13,color:"#b45309",lineHeight:1.6,marginBottom:12}}>Sonuç işaretle ({labeled.length}/{OUTCOME_THRESHOLD}) — doğrulama için {OUTCOME_THRESHOLD-labeled.length} tane daha</div>
+            <div style={{display:"inline-flex",background:"white",border:"1px solid #fde68a",borderRadius:8,padding:"8px 16px",gap:8,alignItems:"center"}}>
+              <div style={{fontFamily:"'Playfair Display',serif",fontSize:28,color:"#d97706"}}>{labeled.length}</div>
+              <div style={{fontSize:12,color:"#92400e",textAlign:"left"}}>/ {OUTCOME_THRESHOLD}<br/>sonuç girildi</div>
+            </div>
+          </div>
+        ):(()=>{
+          const segData={red:{total:0,conv:0},amber:{total:0,conv:0},green:{total:0,conv:0}};
+          labeled.forEach(p=>{
+            const c=classify(p.risk_score||0,p.answers||{},scoreBands.p67,scoreBands);
+            const seg=segData[c.cat]||segData.green;
+            seg.total++;
+            if(!p.no_appointment) seg.conv++;
+          });
+          return(<>
+            <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Segment Doğrulama <span style={{fontSize:11,color:C.muted,fontWeight:400}}>({labeled.length} sonuç)</span></div>
+            <div style={{border:"1px solid #d4e1ef",borderRadius:8,overflow:"hidden"}}>
+              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",background:"#eef3f9",padding:"8px 12px",fontSize:10,letterSpacing:"0.1em",textTransform:"uppercase",color:C.muted,fontWeight:600}}>
+                <div>Segment</div><div style={{textAlign:"center"}}>Toplam</div><div style={{textAlign:"center"}}>Dönüştü</div><div style={{textAlign:"center"}}>Dönüşüm</div>
+              </div>
+              {[["green","🟢 Yüksek pot.","#059669"],["amber","🟡 Orta","#d97706"],["red","🔴 Dikkatli","#dc2626"]].map(([seg,label,color])=>{
+                const d=segData[seg];
+                if(d.total===0) return null;
+                const rate=Math.round(d.conv/d.total*100);
+                return(
+                  <div key={seg} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr",padding:"9px 12px",borderTop:"1px solid #eef3f9",fontSize:13}}>
+                    <div style={{color,fontWeight:500}}>{label}</div>
+                    <div style={{textAlign:"center",color:C.navy}}>{d.total}</div>
+                    <div style={{textAlign:"center",color:"#059669"}}>{d.conv}</div>
+                    <div style={{textAlign:"center",fontWeight:600,color:rate>=70?"#059669":rate>=50?"#d97706":"#dc2626"}}>%{rate}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </>);
+        })()}
+      </div>
     </div>
   );
 }
