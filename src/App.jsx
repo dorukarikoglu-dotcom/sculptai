@@ -731,55 +731,43 @@ function Sidebar({tab,setTab,onLogout,doctor}){
 }
 
 
-/* ─── DEMO HASTALARI — canlı demo sandbox için ──────────────────────────── */
+/* ─── DEMO HASTALARI — v6b uyumlu, satış paneli demo ─────────────────────── */
 const DEMO_PATIENTS = [
-  {id:"demo-1",doctor_id:"demo",created_at:new Date(Date.now()-2*86400000).toISOString(),risk_score:82,segment:"Öncelikli Değerlendirme",
-   answers:{name:"Elif Yılmaz",age:"28",gender:"Kadın",procedure:"Burun Estetiği",motivation:"Başka insanların yorumları beni kötü etkiliyor",support:"Kimseye söylemedim",revision:"Kusursuz sonuç bekliyorum",riskKnowledge:"Hiçbir bilgim yok",expectation:"Tamamen farklı bir görünüm istiyorum",multiDoctor:"Birçok doktorla görüştüm",prevSurgery:"Hayır",rhinoVision:"Aklımda belirli bir referans var — bir ünlü veya fotoğraf",openStory:"Burnumun mükemmel olmasını istiyorum, herkes fark etsin istiyorum."},
-   outcome_procedures:[],no_appointment:false,ai_text:"Elif Hanım'ın profili birden fazla yüksek riskli sinyal barındırıyor. Birincisi, rinoplasti motivasyonu tamamen dışsal — çevresindeki insanların yorumları tetikleyici. Bu durumda ameliyat sonrası memnuniyet, kendi algısından çok başkalarının tepkisine bağımlı hale geliyor ki bu kontrol edilemeyen bir değişken. İkincisi, birçok doktora danışmış olması kararsızlık veya çok yüksek standart sinyali. Üçüncüsü, 'kusursuz sonuç' beklentisi rinoplastinin doğası gereği karşılanamaz — burun estetiğinde %100 simetri anatomik olarak mümkün değil. Aklındaki ünlü referansı mutlaka görün ve kendi yüz yapısıyla uyumluluğunu fotoğraf üzerinden somut olarak gösterin. Konsültasyonda önce motivasyonun gerçek kaynağını netleştirmeniz, ardından 'mükemmel' yerine 'doğal ve uyumlu' çerçevesini kurmanız kritik.",model_source:"global_v5"},
+  // 🔴 Kırmızı — dikkatli yaklaş (skor ≥60)
+  {id:"demo-1",doctor_id:"demo",created_at:new Date(Date.now()-1*86400000).toISOString(),risk_score:72,
+   answers:{name:"Elif Yılmaz",age:"28",gender:"Kadın",procedure:"Burun Estetiği",source:"Instagram",revision:"Kusursuz sonuç bekliyorum",riskKnowledge:"Hiçbir bilgim yok",prevSurgery:"Hayır"},
+   outcome_procedures:[],no_appointment:false,model_source:"global_v6b"},
+  {id:"demo-2",doctor_id:"demo",created_at:new Date(Date.now()-3*86400000).toISOString(),risk_score:65,
+   answers:{name:"Mehmet Kara",age:"45",gender:"Erkek",procedure:"Karın Germe",source:"Google / arama",revision:"Kusursuz sonuç bekliyorum",riskKnowledge:"Hiçbir bilgim yok",prevSurgery:"Evet ama beklentimi karşılamadı"},
+   outcome_procedures:[],no_appointment:true,model_source:"global_v6b"},
 
-  {id:"demo-2",doctor_id:"demo",created_at:new Date(Date.now()-3*86400000).toISOString(),risk_score:71,segment:"Öncelikli Değerlendirme",
-   answers:{name:"Mehmet Kara",age:"45",gender:"Erkek",procedure:"Karın Germe",motivation:"Hayatımda büyük bir değişime ihtiyacım var",support:"Bu işleme karşılar",revision:"Revizyon ihtimali beni çok endişelendiriyor",riskKnowledge:"Hiçbir bilgim yok",expectation:"Belirgin bir fark olmasını istiyorum",multiDoctor:"1-2 doktorla görüştüm",prevSurgery:"Hayır"},
-   outcome_procedures:[],no_appointment:false,ai_text:"Mehmet Bey karın germe operasyonu istiyor ancak profili birden çok risk sinyali taşıyor. 'Hayatımda büyük bir değişime ihtiyacım var' motivasyonu, cerrahi sonucuna hayat değişikliği beklentisi yüklediğini gösteriyor — bu beklenti karşılanamayacağı için postoperatif hayal kırıklığı riski yüksek. Ailesi operasyona karşı ve risk bilgisi sıfır — karın germenin 3-4 haftalık ciddi iyileşme süreci, dren kullanımı ve aktivite kısıtlamalarını bilmiyor. Konsültasyonda öncelikle iyileşme sürecini çok somut ve açık anlatmanız gerekiyor. Hasta fotoğraflarıyla gerçekçi sonuç örnekleri gösterin. Ailesinin karşı olması, iyileşme döneminde destek eksikliği anlamına gelir — bunu doğrudan konuşun.",model_source:"global_v5"},
+  // 🟡 Sarı — orta (skor 50-59)
+  {id:"demo-3",doctor_id:"demo",created_at:new Date(Date.now()-2*86400000).toISOString(),risk_score:55,
+   answers:{name:"Zeynep Aksoy",age:"31",gender:"Kadın",procedure:"Meme Büyütme (Silikon Protez ile)",source:"Hasta tavsiyesi",revision:"Revizyon beni endişelendiriyor",riskKnowledge:"Genel olarak bilgi sahibiyim",prevSurgery:"Hayır"},
+   outcome_procedures:[],no_appointment:false,model_source:"global_v6b"},
+  {id:"demo-4",doctor_id:"demo",created_at:new Date(Date.now()-5*86400000).toISOString(),risk_score:52,
+   answers:{name:"Ayşe Demir",age:"34",gender:"Kadın",procedure:"Yüz Germe",source:"Doktor / klinik tavsiyesi",revision:"Revizyon beni endişelendiriyor",riskKnowledge:"Hiçbir bilgim yok",prevSurgery:"Hayır"},
+   outcome_procedures:[],no_appointment:false,model_source:"global_v6b"},
+  {id:"demo-5",doctor_id:"demo",created_at:new Date(Date.now()-4*86400000).toISOString(),risk_score:50,
+   answers:{name:"Hakan Çelik",age:"38",gender:"Erkek",procedure:"Jinekomasti",source:"Google / arama",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Hiçbir bilgim yok",prevSurgery:"Hayır"},
+   outcome_procedures:["Jinekomasti"],no_appointment:false,had_procedure:true,model_source:"global_v6b"},
 
-  {id:"demo-3",doctor_id:"demo",created_at:new Date(Date.now()-1*86400000).toISOString(),risk_score:65,segment:"Öncelikli Değerlendirme",
-   answers:{name:"Ayşe Demir",age:"34",gender:"Kadın",procedure:"Meme Asimetrisinin Giderilmesi",motivation:"Özgüvenimi artırmak istiyorum",support:"Biliyorlar ama kararsızlar",revision:"Kusursuz sonuç bekliyorum",riskKnowledge:"Genel olarak bilgi sahibiyim",expectation:"Belirgin bir fark olmasını istiyorum",multiDoctor:"Birçok doktorla görüştüm",prevSurgery:"Evet ama beklentimi karşılamadı"},
-   outcome_procedures:[],no_appointment:true,ai_text:"Ayşe Hanım'ın profili dikkatli ele alınması gereken bir vaka. Meme asimetrisi giderilmesi isteyen hastaların verimizde tamamı randevu almamış — bu prosedürde beklenti yönetimi en kritik faktör. Hastanın önceki ameliyattan memnun kalmaması standartlarını daha da yükseltmiş. 'Kusursuz sonuç bekliyorum' ifadesi, meme cerrahisinde tam simetrinin anatomik olarak imkânsız olduğu gerçeğiyle çelişiyor. Birçok doktora danışmış olması, ya hiçbirinin beklentisini karşılamaması ya da çok yüksek standart uyguladığı anlamına geliyor. Konsültasyonda ilk olarak önceki deneyimini dinleyin — ne bekledi, ne aldı, neden memnun kalmadı. Ardından asimetri düzeltmede ulaşılabilir sınırları fotoğraflarla somutlaştırın. 'Mükemmel simetri' yerine 'belirgin iyileşme' çerçevesini kurmanız gerekiyor.",model_source:"global_v5"},
-
-  {id:"demo-4",doctor_id:"demo",created_at:new Date(Date.now()-5*86400000).toISOString(),risk_score:48,segment:"Dikkatli Değerlendir",
-   answers:{name:"Zeynep Aksoy",age:"31",gender:"Kadın",procedure:"Meme Büyütme (Silikon Protez ile)",motivation:"Kendim için daha iyi hissetmek istiyorum",support:"Kararsızlar",revision:"Revizyon beni endişelendiriyor",riskKnowledge:"Genel olarak bilgi sahibiyim",expectation:"Belirgin bir fark olmasını istiyorum",multiDoctor:"1-2 doktorla görüştüm",prevSurgery:"Hayır"},
-   outcome_procedures:[],no_appointment:false,ai_text:"Zeynep Hanım meme büyütme istiyor, motivasyonu içsel ve sağlıklı. Ancak iki sinyal dikkat gerektiriyor: ailesi kararsız ve revizyon ihtimali onu endişelendiriyor. 'Belirgin fark' beklentisi protez boyutu konusunda gerçekçi bir konuşma yapılması gerektiğini gösteriyor. Konsültasyonda önce beden oranlarına uygun protez aralığını somutlaştırın. Revizyon endişesini doğrudan ele alın — 'protezlerin ortalama ömrü 10-15 yıl, değişim gerekebilir' bilgisini verin. Ailesinin kararsızlığı iyileşme sürecinde destek sorununa dönüşebilir — bunu sormaktan çekinmeyin.",model_source:"global_v5"},
-
-  {id:"demo-5",doctor_id:"demo",created_at:new Date(Date.now()-4*86400000).toISOString(),risk_score:52,segment:"Dikkatli Değerlendir",
-   answers:{name:"Hakan Çelik",age:"38",gender:"Erkek",procedure:"Jinekomasti",motivation:"Sosyal özgüvenimi artırmak istiyorum",support:"Evet, destekliyorlar",revision:"Revizyon ihtimali beni çok endişelendiriyor",riskKnowledge:"Hiçbir bilgim yok",expectation:"Dengeli ve orantılı bir sonuç bekliyorum",multiDoctor:"Hayır",prevSurgery:"Hayır"},
-   outcome_procedures:["Jinekomasti"],no_appointment:false,had_procedure:true,ai_text:"",model_source:"global_v5"},
-
-  {id:"demo-6",doctor_id:"demo",created_at:new Date(Date.now()-7*86400000).toISOString(),risk_score:45,segment:"Dikkatli Değerlendir",
-   answers:{name:"Selin Öztürk",age:"41",gender:"Kadın",procedure:"Yüz Germe",motivation:"Görünümümü iyileştirmek istiyorum",support:"Evet, destekliyorlar",revision:"Revizyon beni endişelendiriyor",riskKnowledge:"Genel olarak bilgi sahibiyim",expectation:"Doğal ve dengeli bir sonuç bekliyorum",multiDoctor:"1-2 doktorla görüştüm",prevSurgery:"Evet ve memnunum"},
-   outcome_procedures:[],no_appointment:false,ai_text:"",model_source:"global_v5"},
-
-  {id:"demo-7",doctor_id:"demo",created_at:new Date(Date.now()-6*86400000).toISOString(),risk_score:28,segment:"Randevuya Hazır",
-   answers:{name:"Deniz Aydın",age:"36",gender:"Kadın",procedure:"Meme Dikleştirme",motivation:"Kendim için daha iyi hissetmek istiyorum",support:"Evet, destekliyorlar",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",expectation:"Doğal ve dengeli bir sonuç bekliyorum",multiDoctor:"1-2 doktorla görüştüm",prevSurgery:"Hayır"},
-   outcome_procedures:["Meme Dikleştirme"],no_appointment:false,had_procedure:true,satisfaction_1m:"Memnun",ai_text:"",model_source:"global_v5"},
-
-  {id:"demo-8",doctor_id:"demo",created_at:new Date(Date.now()-8*86400000).toISOString(),risk_score:22,segment:"Randevuya Hazır",
-   answers:{name:"Burcu Şahin",age:"29",gender:"Kadın",procedure:"Burun Estetiği",motivation:"Görünümümü iyileştirmek istiyorum",support:"Evet, destekliyorlar",revision:"Evet, ve olası revizyonu normal kabul ederim",riskKnowledge:"Detaylı araştırdım ve biliyorum",expectation:"Küçük, doğal bir iyileştirme yeterli",multiDoctor:"1-2 doktorla görüştüm",prevSurgery:"Hayır",rhinoVision:"Sadece küçük düzeltmeler istiyorum"},
-   outcome_procedures:["Burun Estetiği"],no_appointment:false,had_procedure:true,satisfaction_1m:"Memnun",satisfaction_6m:"Memnun",ai_text:"Burcu Hanım rinoplasti için ideal bir aday profili çiziyor. Motivasyonu tamamen içsel, ailesi destekliyor, beklentisi küçük ve doğal bir iyileştirme ile sınırlı. Risk bilgisi yüksek — detaylı araştırma yapmış. Revizyonu normal karşılıyor, yani cerrahi sürecin doğasını anlamış. 1-2 doktora danışmış olması sağlıklı bir karar sürecine işaret ediyor. Konsültasyon standart ilerleyebilir. Tekniğinizi ve yaklaşımınızı somut anlatmanız, bu profildeki hastanın güvenini hızla kazanmanızı sağlar. Not: 1. ay ve 6. ay memnuniyet verileri de pozitif — bu hasta tipi kliniğin referans kaynağı olabilir.",model_source:"global_v5"},
-
-  {id:"demo-9",doctor_id:"demo",created_at:new Date(Date.now()-10*86400000).toISOString(),risk_score:18,segment:"Randevuya Hazır",
-   answers:{name:"Canan Korkmaz",age:"33",gender:"Kadın",procedure:"Meme Küçültme",motivation:"Kendim için daha iyi hissetmek istiyorum",support:"Evet, destekliyorlar",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",expectation:"Dengeli ve orantılı bir sonuç bekliyorum",multiDoctor:"Hayır",prevSurgery:"Hayır"},
-   outcome_procedures:["Meme Küçültme"],no_appointment:false,had_procedure:true,ai_text:"",model_source:"global_v5"},
-
-  {id:"demo-10",doctor_id:"demo",created_at:new Date(Date.now()-4*86400000).toISOString(),risk_score:15,segment:"Randevuya Hazır",
-   answers:{name:"Ali Tekin",age:"52",gender:"Erkek",procedure:"Üst Göz Kapağı Estetiği",motivation:"Görünümümü iyileştirmek istiyorum",support:"Evet, destekliyorlar",revision:"Evet, ve olası revizyonu normal kabul ederim",riskKnowledge:"Genel olarak bilgi sahibiyim",expectation:"Küçük, doğal bir iyileştirme yeterli",multiDoctor:"Hayır",prevSurgery:"Hayır"},
-   outcome_procedures:[],no_appointment:false,ai_text:"",model_source:"global_v5"},
-
-  {id:"demo-11",doctor_id:"demo",created_at:new Date(Date.now()-12*86400000).toISOString(),risk_score:12,segment:"Marka Elçisi",
-   answers:{name:"Pınar Erdoğan",age:"30",gender:"Kadın",procedure:"Botoks",motivation:"Kendim için daha iyi hissetmek istiyorum",support:"Evet, destekliyorlar",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",expectation:"Küçük, doğal bir iyileştirme yeterli",multiDoctor:"Hayır",prevSurgery:"Evet ve memnunum",sharing:"Evet, açıkça paylaşırım",socialInfluence:"Sık sık danışırlar",recommends:"Evet, sık öneririm"},
-   outcome_procedures:["Botoks"],no_appointment:false,had_procedure:true,satisfaction_1m:"Çok Memnun",satisfaction_6m:"Memnun",ambassador_sent:true,ambassador_code:"REF-X7K2",ai_text:"Pınar Hanım marka elçisi profili — düşük risk, yüksek memnuniyet, aktif sosyal çevre. Önceki deneyiminden memnun, çevresine açıkça paylaşıyor ve sık sık tavsiye veriyor. Bu profil kliniğinizin organik büyümesi için çok değerli. Referans programını aktive edin — her yönlendirdiği hasta için küçük bir avantaj sunmak (örn. sonraki seansta %10 indirim) referans döngüsünü güçlendirir. Konsültasyonda ekstra bir şey yapmanıza gerek yok — standart kaliteli hizmet bu hastayı doğal bir marka elçisi yapar.",model_source:"global_v5"},
-
-  {id:"demo-12",doctor_id:"demo",created_at:new Date(Date.now()-9*86400000).toISOString(),risk_score:10,segment:"Marka Elçisi",
-   answers:{name:"Derya Koç",age:"35",gender:"Kadın",procedure:"Dolgu Uygulaması",motivation:"Özgüvenimi artırmak istiyorum",support:"Evet, destekliyorlar",revision:"Evet, ve olası revizyonu normal kabul ederim",riskKnowledge:"Detaylı araştırdım ve biliyorum",expectation:"Küçük, doğal bir iyileştirme yeterli",multiDoctor:"Hayır",prevSurgery:"Evet ve memnunum",sharing:"Evet, açıkça paylaşırım",socialInfluence:"Evet, sık sık danışırlar",recommends:"Evet, sık öneririm"},
-   outcome_procedures:["Dolgu Uygulaması"],no_appointment:false,had_procedure:true,satisfaction_1m:"Memnun",ai_text:"",model_source:"global_v5"},
+  // 🟢 Yeşil — yüksek potansiyel (skor <50)
+  {id:"demo-6",doctor_id:"demo",created_at:new Date(Date.now()-6*86400000).toISOString(),risk_score:38,
+   answers:{name:"Selin Öztürk",age:"41",gender:"Kadın",procedure:"Meme Dikleştirme",source:"Hasta tavsiyesi",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Genel olarak bilgi sahibiyim",prevSurgery:"Evet ve memnunum"},
+   outcome_procedures:["Meme Dikleştirme"],no_appointment:false,had_procedure:true,model_source:"global_v6b"},
+  {id:"demo-7",doctor_id:"demo",created_at:new Date(Date.now()-7*86400000).toISOString(),risk_score:28,
+   answers:{name:"Deniz Aydın",age:"36",gender:"Kadın",procedure:"Burun Estetiği",source:"Instagram",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",prevSurgery:"Hayır"},
+   outcome_procedures:["Burun Estetiği"],no_appointment:false,had_procedure:true,model_source:"global_v6b"},
+  {id:"demo-8",doctor_id:"demo",created_at:new Date(Date.now()-8*86400000).toISOString(),risk_score:22,
+   answers:{name:"Burcu Şahin",age:"29",gender:"Kadın",procedure:"Meme Küçültme",source:"Hasta tavsiyesi",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",prevSurgery:"Hayır"},
+   outcome_procedures:["Meme Küçültme"],no_appointment:false,had_procedure:true,model_source:"global_v6b"},
+  {id:"demo-9",doctor_id:"demo",created_at:new Date(Date.now()-10*86400000).toISOString(),risk_score:18,
+   answers:{name:"Ali Tekin",age:"52",gender:"Erkek",procedure:"Üst Göz Kapağı Estetiği",source:"Doktor / klinik tavsiyesi",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Genel olarak bilgi sahibiyim",prevSurgery:"Hayır"},
+   outcome_procedures:[],no_appointment:false,model_source:"global_v6b"},
+  {id:"demo-10",doctor_id:"demo",created_at:new Date(Date.now()-4*86400000).toISOString(),risk_score:15,
+   answers:{name:"Canan Korkmaz",age:"33",gender:"Kadın",procedure:"Botoks Uygulaması",source:"Instagram",revision:"Evet, olası revizyonu normal karşılarım",riskKnowledge:"Detaylı araştırdım ve biliyorum",prevSurgery:"Evet ve memnunum"},
+   outcome_procedures:["Botoks"],no_appointment:false,had_procedure:true,model_source:"global_v6b"},
 ];
 
 const DEMO_DOCTOR = {id:"demo",name:"Demo Kullanıcı",clinic_name:"Demo Klinik"};
@@ -4837,8 +4825,8 @@ export default function App(){
     <div>
       <div style={{position:"fixed",top:0,left:0,right:0,zIndex:9999,background:"linear-gradient(135deg,#1d4ed8,#7c3aed)",padding:"8px 20px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:10}}>
-          <div style={{fontSize:14,color:"white",fontWeight:600,fontFamily:"'Nunito',sans-serif"}}>🎯 SculptAI Demo</div>
-          <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif"}}>Gerçek veriler kullanılmamaktadır · Tüm hastalar örnektir</div>
+          <div style={{fontSize:14,color:"white",fontWeight:600,fontFamily:"'Nunito',sans-serif"}}>SculptAI Demo</div>
+          <div style={{fontSize:11,color:"rgba(255,255,255,0.75)",fontFamily:"'Nunito',sans-serif"}}>Örnek lead verileri · Dönüşüm segmentasyonu</div>
         </div>
         <a href="/panel" style={{fontSize:11,color:"white",textDecoration:"underline",fontFamily:"'Nunito',sans-serif",opacity:0.8}}>Giriş Yap →</a>
       </div>
