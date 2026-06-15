@@ -868,7 +868,7 @@ ${pred.revReasons && pred.revReasons.length > 0 ? `<div class="section"><div cla
 ${a.openStory ? `<div class="section"><div class="section-title">Hastanın Kendi Anlatısı</div><div style="font-size:11px;color:#2d5a8e;line-height:1.6;background:#f8fafd;border:1px solid #d4e1ef;border-radius:6px;padding:8px 10px;font-style:italic">"${a.openStory}"</div></div>` : ""}
 
 <div class="footer">
-  <div>SculptAI Klinik Karar Desteği — Bu rapor otomatik olarak oluşturulmuştur.</div>
+  <div>SculptAI Dönüşüm Zekası — Bu rapor otomatik olarak oluşturulmuştur.</div>
   <div>Gizli · Sadece hekim kullanımı içindir</div>
 </div>
 
@@ -2051,7 +2051,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",gap:2}}>
                 <span style={{fontFamily:"'Playfair Display',serif",fontSize:17,fontWeight:400,color:"#1e3a5f",lineHeight:1,letterSpacing:"-0.02em"}}>SculptAI</span>
                 <div style={{width:"100%",height:1,background:"linear-gradient(90deg,#1d4ed8,transparent)"}}/>
-                <span style={{fontSize:8,letterSpacing:"0.22em",color:"#7b9ab5",textTransform:"uppercase"}}>Klinik Karar Desteği</span>
+                <span style={{fontSize:8,letterSpacing:"0.22em",color:"#7b9ab5",textTransform:"uppercase"}}>Dönüşüm Zekası</span>
               </div>
             </div>
             <div>
@@ -4627,7 +4627,7 @@ function Login({onLogin}){
           </div>
           <div style={{position:"absolute",bottom:40,left:40,right:"30%"}}>
             <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:300,color:"white",lineHeight:1.4,textShadow:"0 2px 20px rgba(0,0,0,0.3)",fontStyle:"italic"}}>
-              "Her hasta bir ilişki.<br/>Her ilişki bir güven."
+              "Doğru hastaya, doğru zamanda,<br/>doğru yaklaşımla."
             </div>
           </div>
         </div>
@@ -4658,12 +4658,12 @@ function Login({onLogin}){
               </div>
               <div style={{fontSize:13,fontWeight:500,color:"#1e3a5f",letterSpacing:"0.04em"}}>SculptAI</div>
             </div>
-            {isMobile&&<div style={{fontSize:11,color:"#7b9ab5",letterSpacing:"0.08em"}}>Klinik Karar Desteği</div>}
+            {isMobile&&<div style={{fontSize:11,color:"#7b9ab5",letterSpacing:"0.08em"}}>Dönüşüm Zekası</div>}
           </div>
 
           {/* Title */}
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:isMobile?28:38,fontWeight:300,color:"#1e3a5f",lineHeight:1.1,marginBottom:8,letterSpacing:"-0.02em",textAlign:isMobile?"center":"left"}}>
-            {mode==="login"?<>Görünmeyeni<br/><em>görmek.</em></>:<>Kliniğinizin<br/><em>yeni refleksi.</em></>}
+            {mode==="login"?<>Aynı bütçe.<br/>Daha fazla<br/><em>ameliyat.</em></>:<>Kliniğinizin<br/><em>dönüşüm zekası.</em></>}
           </div>
           <div style={{fontSize:13,color:"#7b9ab5",lineHeight:1.6,marginBottom:24,textAlign:isMobile?"center":"left"}}>
             {mode==="login"?"Panele giriş yapın.":"Hesap oluşturun, hemen kullanmaya başlayın."}
@@ -4731,7 +4731,7 @@ function Login({onLogin}){
           )}
 
           <div style={{textAlign:"center",fontSize:11,color:"#d4e1ef",marginTop:20,letterSpacing:"0.06em"}}>
-            SculptAI · Klinik Karar Desteği
+            SculptAI · Dönüşüm Zekası
           </div>
         </div>
       </div>
