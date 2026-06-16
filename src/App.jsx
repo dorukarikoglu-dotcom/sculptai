@@ -4177,7 +4177,7 @@ function Login({onLogin}){
 
           {/* Title */}
           <div style={{fontFamily:"'Playfair Display',serif",fontSize:isMobile?28:38,fontWeight:300,color:"#1e3a5f",lineHeight:1.1,marginBottom:8,letterSpacing:"-0.02em",textAlign:isMobile?"center":"left"}}>
-            {mode==="login"?<>Aynı bütçe.<br/>Daha fazla<br/><em>ameliyat.</em></>:<>Kliniğinizin<br/><em>dönüşüm zekası.</em></>}
+            {mode==="login"?<>Aynı bütçe.<br/>Daha fazla<br/><em>işlem.</em></>:<>Kliniğinizin<br/><em>dönüşüm zekası.</em></>}
           </div>
           <div style={{fontSize:13,color:"#7b9ab5",lineHeight:1.6,marginBottom:24,textAlign:isMobile?"center":"left"}}>
             {mode==="login"?"Panele giriş yapın.":"Hesap oluşturun, hemen kullanmaya başlayın."}
