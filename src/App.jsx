@@ -938,7 +938,7 @@ function ValueScreen({patients,doctor}){
       </div>
 
       {/* SEGMENT + KANAL */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:12,marginBottom:12}}>
         <div style={card}>
           <div style={{fontSize:13,fontWeight:600,letterSpacing:"0.08em",textTransform:"uppercase",color:"#2d5a8e",marginBottom:12}}>Segment Dağılımı</div>
           {[
@@ -1058,7 +1058,7 @@ function SettingsScreen({doctor,onLogout,newU,setNewU,newP,setNewP,newP2,setNewP
     else setEnabledProcs(prev=>[...new Set([...prev,...procs])]);
   }
   return(
-    <div style={{flex:1,overflowY:"auto",padding:"24px 32px",maxWidth:520}}>
+    <div style={{flex:1,overflowY:"auto",padding:"20px 16px",maxWidth:520}}>
       <div style={{fontFamily:"'Playfair Display',serif",fontSize:34,fontWeight:300,color:"#1e3a5f",marginBottom:24,letterSpacing:"-0.01em"}}>Ayarlar</div>
 
       {/* PROSEDÜR SEÇİMİ */}
@@ -1271,7 +1271,7 @@ function Analytics({patients,avgRevenue=40000}){
       </div>
 
       {/* SEGMENT + TREND / SOURCES */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(280px,1fr))",gap:12,marginBottom:12}}>
 
         {/* Segment dist — dönüşüm potansiyeli dili */}
         <div style={card()}>
@@ -1605,7 +1605,7 @@ function DoctorPanel({doctor,onLogout,demoPatients}){
           )}
 
           {/* KPI */}
-          <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:isMobile?8:12,marginBottom:isMobile?16:24}} className="f2">
+          <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)",gap:isMobile?8:12,marginBottom:isMobile?16:24}} className="f2">
             {[
               {val:total,label:"Toplam Lead",note:"Tüm kayıtlar",color:"#1e3a5f",accent:"#1d4ed8"},
               {val:randevuAlan>0?`%${donusum}`:"—",label:"Dönüşüm",note:randevuAlan>0?`${randevuAlan}/${total} randevu`:"Henüz outcome yok",color:donusum>=60?"#059669":donusum>=40?"#d97706":"#7b9ab5",accent:donusum>=60?"#059669":donusum>=40?"#d97706":"#7b9ab5"},
