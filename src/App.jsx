@@ -3034,7 +3034,7 @@ function PatientForm({doctorId}){
     if(!doctorId) return;
     const isUUID=/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(doctorId);
     const col=isUUID?"id":"username";
-    sb.from("doctors").select("id,name,clinic_name,photo_url,primary_color,enabled_procedures,form_mode").eq(col,doctorId).maybeSingle()
+    sb.from("doctors").select("id,name,clinic_name,photo_url,primary_color,enabled_procedures").eq(col,doctorId).maybeSingle()
       .then(({data})=>{ if(data){ setDoctorInfo(data); if(!isUUID) setDoctorId(data.id); } });
   },[doctorId]);
 
