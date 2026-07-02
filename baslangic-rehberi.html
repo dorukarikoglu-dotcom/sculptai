@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SculptAI — Başlangıç Rehberi</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,300;0,400;1,300;1,400&family=Nunito:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+@page{size:A4 portrait;margin:14mm 16mm}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Nunito',sans-serif;background:#fff;color:#1e3a5f;font-size:11px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+
+/* EDITOR BAR */
+.editor{background:#1e3a5f;padding:14px 24px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.editor label{font-size:11px;color:rgba(248,250,253,0.6);letter-spacing:0.08em;text-transform:uppercase}
+.editor input{padding:7px 10px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.1);color:#f8fafd;border-radius:5px;font-size:13px;font-family:'Nunito',sans-serif;width:200px}
+.editor button{padding:8px 20px;background:#1d4ed8;color:white;border:none;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif}
+@media print{.editor{display:none!important}}
+
+.page{width:210mm;margin:0 auto;padding:8mm 0}
+
+/* HEADER */
+.header{display:flex;justify-content:space-between;align-items:flex-start;padding-bottom:10px;border-bottom:2px solid #1e3a5f;margin-bottom:16px}
+.logo{font-family:'Playfair Display',serif;font-size:20px;font-weight:300;color:#1e3a5f}
+.logo em{color:#1d4ed8;font-style:italic}
+.logo-sub{font-size:8px;letter-spacing:0.18em;text-transform:uppercase;color:#7b9ab5;margin-top:2px}
+.meta{text-align:right;font-size:9px;color:#7b9ab5;line-height:1.6}
+
+.title{font-family:'Playfair Display',serif;font-size:26px;font-weight:300;color:#1e3a5f;margin-bottom:6px;letter-spacing:-0.02em}
+.title em{color:#1d4ed8;font-style:italic}
+.subtitle{font-size:12px;color:#7b9ab5;margin-bottom:20px}
+
+/* CREDENTIALS BOX */
+.cred-box{background:#f8fafd;border:1.5px solid #d4e1ef;border-radius:10px;padding:14px 18px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cred-item .cred-label{font-size:8px;letter-spacing:0.12em;text-transform:uppercase;color:#7b9ab5;margin-bottom:3px}
+.cred-item .cred-val{font-size:14px;font-weight:600;color:#1e3a5f;word-break:break-all}
+.cred-full{grid-column:1/-1}
+
+/* SECTION */
+.section{margin-bottom:16px}
+.section-num{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:#1e3a5f;color:#f8fafd;font-size:11px;font-weight:700;margin-right:8px;flex-shrink:0}
+.section-title{font-size:13px;font-weight:700;color:#1e3a5f;display:flex;align-items:center;margin-bottom:8px;letter-spacing:0.02em}
+.section-body{font-size:11px;color:#2d5a8e;line-height:1.65;padding-left:30px}
+
+/* FLOW */
+.flow{display:flex;gap:8px;margin-bottom:18px}
+.flow-step{flex:1;background:#f8fafd;border:1px solid #d4e1ef;border-radius:8px;padding:10px;text-align:center;position:relative}
+.flow-step::after{content:'→';position:absolute;right:-12px;top:50%;transform:translateY(-50%);color:#d4e1ef;font-size:14px}
+.flow-step:last-child::after{display:none}
+.flow-icon{font-size:18px;margin-bottom:5px}
+.flow-label{font-size:10px;font-weight:600;color:#1e3a5f;letter-spacing:0.04em}
+.flow-desc{font-size:9px;color:#7b9ab5;margin-top:3px}
+
+/* COLOR GUIDE */
+.color-guide{display:flex;gap:8px;margin-bottom:18px}
+.color-item{flex:1;border-radius:8px;padding:9px 10px;text-align:center}
+.color-icon{font-size:14px;margin-bottom:3px}
+.color-label{font-size:10px;font-weight:600}
+.color-desc{font-size:9px;opacity:0.7;margin-top:2px}
+.c-red{background:#fef2f2;border:1px solid #fecaca;color:#991b1b}
+.c-amber{background:#fffbeb;border:1px solid #fde68a;color:#92400e}
+.c-green{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46}
+.c-purple{background:#faf5ff;border:1px solid #ddd6fe;color:#5b21b6}
+
+/* TIP BOX */
+.tip{background:#eff6ff;border:1px solid #dbeafe;border-radius:8px;padding:10px 14px;margin-bottom:14px}
+.tip-title{font-size:10px;font-weight:700;color:#1d4ed8;letter-spacing:0.1em;text-transform:uppercase;margin-bottom:4px}
+.tip-body{font-size:11px;color:#1e40af;line-height:1.55}
+
+/* SUPPORT */
+.support{background:#f8fafd;border:1px solid #d4e1ef;border-radius:8px;padding:12px 16px;margin-top:16px;display:flex;align-items:center;gap:14px}
+.support-icon{font-size:22px;flex-shrink:0}
+.support-text{font-size:11px;color:#2d5a8e;line-height:1.5}
+.support-text strong{color:#1e3a5f}
+
+.footer{margin-top:14px;padding-top:8px;border-top:1px solid #eef3f9;font-size:8px;color:#7b9ab5;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<div class="editor">
+  <div><label>Doktor Adı</label><br><input type="text" id="e-doc" value="Dr. Ayşe Kaya" oninput="upd()"></div>
+  <div><label>Klinik Adı</label><br><input type="text" id="e-clinic" value="Özel Estetik Kliniği" oninput="upd()"></div>
+  <div><label>Kullanıcı Adı</label><br><input type="text" id="e-user" value="dr-ayse" oninput="upd()"></div>
+  <div><label>İlk Şifre</label><br><input type="text" id="e-pass" value="sculpt2024" oninput="upd()"></div>
+  <button onclick="window.print()">🖨 Yazdır / PDF</button>
+</div>
+
+<div class="page">
+
+<div class="header">
+  <div>
+    <div class="logo">Sculpt<em>AI</em></div>
+    <div class="logo-sub">Klinik Karar Desteği · Başlangıç Rehberi</div>
+  </div>
+  <div class="meta">
+    <span id="o-clinic">Özel Estetik Kliniği</span><br>
+    <span id="o-doc">Dr. Ayşe Kaya</span><br>
+    Hazırlanma: <span id="o-date"></span>
+  </div>
+</div>
+
+<div class="title">Hoş geldiniz, <em id="o-doc2">Dr. Ayşe Kaya</em>.</div>
+<div class="subtitle">Bu rehber, SculptAI'ı kliniğinizde kullanmaya başlamak için ihtiyacınız olan her şeyi içeriyor.</div>
+
+<!-- CREDENTIALS -->
+<div class="cred-box">
+  <div class="cred-item"><div class="cred-label">Panel Adresi</div><div class="cred-val">app.sculptai.health/panel</div></div>
+  <div class="cred-item"><div class="cred-label">Kullanıcı Adı</div><div class="cred-val" id="o-user">dr-ayse</div></div>
+  <div class="cred-item"><div class="cred-label">İlk Şifre</div><div class="cred-val" id="o-pass">sculpt2024</div></div>
+  <div class="cred-item"><div class="cred-label">Hasta Form Linki</div><div class="cred-val" id="o-form">app.sculptai.health/form/dr-ayse</div></div>
+</div>
+
+<div class="tip">
+  <div class="tip-title">İlk adım</div>
+  <div class="tip-body">Panele giriş yapıp Ayarlar'dan şifrenizi değiştirin. Ardından QR posteri bekleme odanıza asın.</div>
+</div>
+
+<!-- FLOW -->
+<div class="section">
+  <div class="section-title"><span class="section-num">1</span> Sistem Nasıl Çalışır?</div>
+</div>
+<div class="flow">
+  <div class="flow-step"><div class="flow-icon">📱</div><div class="flow-label">Hasta dolduruyor</div><div class="flow-desc">QR ile form açılır, 3-5 dk sürer</div></div>
+  <div class="flow-step"><div class="flow-icon">🧠</div><div class="flow-label">AI analiz ediyor</div><div class="flow-desc">Risk skoru + profil belirlenir</div></div>
+  <div class="flow-step"><div class="flow-icon">📊</div><div class="flow-label">Panel'de görüyorsun</div><div class="flow-desc">Renk koduyla sınıflandırılmış</div></div>
+  <div class="flow-step"><div class="flow-icon">📄</div><div class="flow-label">PDF brifing alıyorsun</div><div class="flow-desc">A4 brifing ile konsültasyona gir</div></div>
+</div>
+
+<!-- COLOR GUIDE -->
+<div class="section">
+  <div class="section-title"><span class="section-num">2</span> Renk Kodları Ne Anlama Geliyor?</div>
+</div>
+<div class="color-guide">
+  <div class="color-item c-red"><div class="color-icon">🔴</div><div class="color-label">Öncelikli Değerlendirme</div><div class="color-desc">Beklenti yönetimi kritik. Genişletilmiş konsültasyon önerilir.</div></div>
+  <div class="color-item c-amber"><div class="color-icon">🟡</div><div class="color-label">Dikkatli Değerlendir</div><div class="color-desc">Bazı sinyaller var. Belirli konuları açmanız önerilir.</div></div>
+  <div class="color-item c-green"><div class="color-icon">🟢</div><div class="color-label">Randevuya Hazır</div><div class="color-desc">Düşük risk. Standart konsültasyon yeterli.</div></div>
+  <div class="color-item c-purple"><div class="color-icon">🌟</div><div class="color-label">Marka Elçisi</div><div class="color-desc">Düşük risk + referans potansiyeli yüksek.</div></div>
+</div>
+
+<!-- DAILY USE -->
+<div class="section">
+  <div class="section-title"><span class="section-num">3</span> Günlük Kullanım</div>
+  <div class="section-body">
+    <strong>Konsültasyon öncesi:</strong> Paneli açın → hastayı bulun → kartı tıklayıp detayı görün → "📄 PDF" butonuyla brifing çıkarın → yazdırın veya iPad'den gösterin.<br><br>
+    <strong>Konsültasyon sonrası:</strong> Hasta kartını açın → "Randevu?" butonuna basarak sonucu girin. Ameliyat olduysa "Ameliyat?" butonuyla işaretleyin. Bu veriler modelin öğrenmesi için kritik.<br><br>
+    <strong>Gelmedi ise:</strong> Hasta kartındaki "✕ RY" veya "Gelmedi" butonuna basın. Bu veri de modeli eğitmek için kullanılır.
+  </div>
+</div>
+
+<div class="tip">
+  <div class="tip-title">Outcome verisi neden önemli?</div>
+  <div class="tip-body">Her girdiğiniz sonuç (randevu aldı / almadı / ameliyat oldu / memnuniyet), modelin kliniğinize özel öğrenmesini sağlar. 25+ etiketli hasta biriktiğinde sistem otomatik olarak kliniğinize özel bir model eğitir — doğruluk artar, tahminler size özelleşir.</div>
+</div>
+
+<!-- SECRETARY -->
+<div class="section">
+  <div class="section-title"><span class="section-num">4</span> Sekreter / Asistan İçin</div>
+  <div class="section-body">
+    <strong>Hasta geldiğinde:</strong> "Doktorunuz sizi daha iyi tanıyabilmesi için kısa bir form doldurmanızı rica ediyoruz. Telefonunuzla bu QR kodu okutabilirsiniz." deyin.<br><br>
+    <strong>Form ne kadar sürer:</strong> 3-5 dakika. Bekleme odasında kolayca doldurulabilir.<br><br>
+    <strong>Hasta sorularına:</strong> "Bu form tamamen gizlidir, sadece doktorunuz görebilir. Ameliyat kararı değil, konsültasyonun daha verimli geçmesi içindir." diyebilirsiniz.<br><br>
+    <strong>Form doldurmak istemeyen hasta:</strong> Zorunlu değil. Doktor formsuz da konsültasyon yapabilir. Ancak formlu hastalarda konsültasyon çok daha verimli geçer.
+  </div>
+</div>
+
+<!-- THRESHOLD MODES -->
+<div class="section">
+  <div class="section-title"><span class="section-num">5</span> Hassasiyet Ayarı (Threshold Modes)</div>
+  <div class="section-body">
+    Panelde Ayarlar sekmesinden 3 mod seçebilirsiniz:<br><br>
+    <strong>🎯 Temkinli:</strong> Az kırmızı, yüksek isabet. "Kırmızı deyince %90 haklısın." Az yanlış alarm isterseniz bu mod.<br>
+    <strong>⚖️ Dengeli:</strong> Varsayılan. Çoğu klinik için ideal denge.<br>
+    <strong>🔍 Agresif:</strong> Daha fazla risk yakalar. Yanlış alarm artar ama kaçırma azalır.
+  </div>
+</div>
+
+<!-- SUPPORT -->
+<div class="support">
+  <div class="support-icon">💬</div>
+  <div class="support-text">
+    <strong>Destek ve sorular için:</strong> dorukarikoglu@gmail.com<br>
+    İlk hafta boyunca günlük check-in yapılacaktır. Herhangi bir sorun veya öneriniz için çekinmeden ulaşın.
+  </div>
+</div>
+
+<div class="footer">
+  <div>SculptAI Klinik Karar Desteği — Başlangıç Rehberi v1.0</div>
+  <div>Gizli · Sadece klinik personeli içindir</div>
+</div>
+
+</div>
+
+<script>
+document.getElementById('o-date').textContent=new Date().toLocaleDateString('tr-TR',{day:'numeric',month:'long',year:'numeric'});
+function upd(){
+  var doc=document.getElementById('e-doc').value;
+  var clinic=document.getElementById('e-clinic').value;
+  var user=document.getElementById('e-user').value;
+  var pass=document.getElementById('e-pass').value;
+  document.getElementById('o-doc').textContent=doc;
+  document.getElementById('o-doc2').textContent=doc;
+  document.getElementById('o-clinic').textContent=clinic;
+  document.getElementById('o-user').textContent=user;
+  document.getElementById('o-pass').textContent=pass;
+  document.getElementById('o-form').textContent='app.sculptai.health/form/'+user;
+}
+</script>
+</body>
+</html>

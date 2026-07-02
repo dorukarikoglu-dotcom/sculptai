@@ -2,3 +2,7 @@ node_modules/
 dist/
 .env
 .env.*
+
+# Local Netlify folder
+.netlify
+.claude/settings.local.json
