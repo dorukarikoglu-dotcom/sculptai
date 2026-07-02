@@ -663,10 +663,10 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
 
   const ALL_PROCS=["Burun Estetiği","Meme Küçültme","Meme Büyütme","Meme Dikleştirme","Karın Germe","Liposuction","Üst Göz Kapağı","Alt Göz Kapağı","Botoks","Dolgu","Kol Germe","Yüz Germe","Uyluk Germe","Popo Estetiği","Jinekomasti"];
 
-  async function saveOutcome(){
+  async function saveOutcome(list=outcomeProcedures){
     for(let attempt=0;attempt<3;attempt++){
       try{
-        const {error}=await sb.from("patients").update({outcome_procedures:outcomeProcedures,no_appointment:false}).eq("id",patient.id);
+        const {error}=await sb.from("patients").update({outcome_procedures:list,no_appointment:false}).eq("id",patient.id);
         if(error) throw error;
         setNoAppointment(false);
         setShowOutcome(false);
@@ -826,7 +826,7 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
           <div onClick={e=>e.stopPropagation()} style={{padding:"10px 16px",borderTop:"1px solid #d4e1ef",background:"#eef3f9"}}>
             <div style={{fontSize:10,letterSpacing:"0.14em",textTransform:"uppercase",color:"#7b9ab5",marginBottom:8,fontWeight:500}}>Pipeline</div>
             <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-              <button onClick={()=>{if(outcomeProcedures.length===0){setOutcomeProcedures([a.procedure||"İşlem"]);saveOutcome();}else setShowOutcome(v=>!v);}}
+              <button onClick={()=>{if(outcomeProcedures.length===0){const list=[a.procedure||"İşlem"];setOutcomeProcedures(list);saveOutcome(list);}else setShowOutcome(v=>!v);}}
                 style={{padding:"7px 14px",borderRadius:7,fontSize:12,fontWeight:500,border:`1.5px solid ${outcomeProcedures.length>0?"#059669":"#d4e1ef"}`,background:outcomeProcedures.length>0?"#059669":"white",color:outcomeProcedures.length>0?"white":"#7b9ab5",cursor:"pointer"}}>
                 {outcomeProcedures.length>0?"✓ Randevu":"Randevu al"}
               </button>
@@ -870,7 +870,7 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
                   })}
                 </div>
                 <div style={{display:"flex",gap:8}}>
-                  <button onClick={saveOutcome} style={{padding:"9px 20px",background:"#1e3a5f",border:"none",borderRadius:7,color:"#f8fafd",fontSize:13,fontWeight:500,cursor:"pointer"}}>Kaydet</button>
+                  <button onClick={()=>saveOutcome()} style={{padding:"9px 20px",background:"#1e3a5f",border:"none",borderRadius:7,color:"#f8fafd",fontSize:13,fontWeight:500,cursor:"pointer"}}>Kaydet</button>
                   <button onClick={()=>setShowOutcome(false)} style={{padding:"9px 14px",background:"transparent",border:"1px solid #d4e1ef",borderRadius:7,color:"#7b9ab5",fontSize:13,cursor:"pointer"}}>İptal</button>
                 </div>
               </div>
