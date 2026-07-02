@@ -4034,47 +4034,26 @@ function Login({onLogin}){
 
   async function attempt(){
     setLoading(true);setErr("");
-    const email=`${u.trim().toLowerCase()}@${AUTH_EMAIL_DOMAIN}`;
-
-    // 1. Supabase Auth ile dene
-    const {data:authData,error:authErr}=await sb.auth.signInWithPassword({email,password:p});
-    if(authData?.user){
-      // Auth başarılı — doctor kaydını çek
-      const {data:doc}=await sb.from("doctors").select("*").eq("auth_id",authData.user.id).maybeSingle();
-      if(doc){ onLogin(doc); setLoading(false); return; }
-      // auth_id eşleşmedi — username ile dene (migrasyon)
-      const {data:doc2}=await sb.from("doctors").select("*").eq("username",u.trim()).maybeSingle();
-      if(doc2){
-        await sb.from("doctors").update({auth_id:authData.user.id}).eq("id",doc2.id);
-        onLogin(doc2); setLoading(false); return;
-      }
-    }
-
-    // 2. Auth başarısız — legacy login dene (mevcut doktorlar için migrasyon)
-    const hashed=await hashPassword(p);
-    const {data:legacy}=await sb.from("doctors").select("*").eq("username",u.trim()).maybeSingle();
-    if(legacy && (legacy.password_hash===hashed || legacy.password_hash===p || legacy.password_hash==="migrated_to_auth")){
-      // Legacy login başarılı — Supabase Auth kullanıcısı oluştur veya giriş yap
-      let authUserId=null;
-      try{
-        // Önce signUp dene (yeni auth kullanıcısı)
-        const {data:newAuth,error:signUpErr}=await sb.auth.signUp({email,password:p});
-        if(newAuth?.user && !signUpErr){
-          authUserId=newAuth.user.id;
-        } else {
-          // signUp başarısız — muhtemelen zaten var, signIn dene
-          const {data:existAuth}=await sb.auth.signInWithPassword({email,password:p});
-          if(existAuth?.user) authUserId=existAuth.user.id;
+    // Server-side login — frontend artık doctors tablosuna doğrudan SELECT atmaz
+    try{
+      const res=await fetch("/api/auth-login",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({username:u.trim().toLowerCase(),password:p}),
+      });
+      if(res.ok){
+        const {doctor,session}=await res.json();
+        // Supabase session'ı client'a kur — dashboard sorguları authenticated rolüyle çalışsın
+        if(session?.access_token){
+          try{await sb.auth.setSession({access_token:session.access_token,refresh_token:session.refresh_token});}catch{}
         }
-      }catch(e){}
-      // auth_id'yi güncelle
-      if(authUserId){
-        await sb.from("doctors").update({auth_id:authUserId,password_hash:"migrated_to_auth"}).eq("id",legacy.id);
-        legacy.auth_id=authUserId; // local objeyi de güncelle
+        if(doctor){ onLogin(doctor); setLoading(false); return; }
       }
-      onLogin(legacy); setLoading(false); return;
+    }catch(e){
+      setErr("Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.");
+      setLoading(false);
+      return;
     }
-
     setErr("Kullanıcı adı veya şifre hatalı.");
     setLoading(false);
   }
@@ -4287,7 +4266,7 @@ export default function App(){
       sb.auth.getSession().then(({data:{session}})=>{
         if(session?.user){
           // Auth session var — doctor kaydını çek
-          sb.from("doctors").select("*").eq("auth_id",session.user.id).maybeSingle()
+          sb.from("doctors").select("id,auth_id,name,username,clinic_name,enabled_procedures,avg_revenue,primary_color,photo_url").eq("auth_id",session.user.id).maybeSingle()
             .then(({data:doc})=>{
               if(doc){setDoctor(doc);setView("doctor");return;}
               // auth_id eşleşmedi — sessionStorage fallback
