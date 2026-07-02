@@ -538,6 +538,17 @@ const QUESTIONS=[
   {id:"phone",section:"İletişim",label:"Telefon numaranız (randevu için)",type:"text",placeholder:"05XX XXX XX XX",optional:true},
   {id:"openStory",section:"Size Bir Sorum Var",label:"Bu işlemden sonra hayatınızda ne değişmesini istiyorsunuz? Kendi cümlelerinizle anlatır mısınız.",type:"text",placeholder:"İstediğiniz kadar az veya çok yazabilirsiniz...",optional:true},
 ];
+// Hastaya GÖRÜNEN metin geçersiz kılmaları — kayıtlı değerler, alan adları ve skorlama DEĞİŞMEZ
+const TR_DISPLAY_OVERRIDES={
+  revision:{
+    label:"Sonuçtan beklentinizi nasıl tanımlarsınız?",
+    options:{
+      "Evet, olası revizyonu normal karşılarım":"Doğal bir iyileşme benim için yeterli",
+      "Revizyon beni endişelendiriyor":"Belirgin bir değişim bekliyorum",
+      "Kusursuz sonuç bekliyorum":"Kusursuz bir sonuç bekliyorum",
+    },
+  },
+};
 const SECTIONS=[...new Set(QUESTIONS.map(q=>q.section))];
 
 
@@ -2170,10 +2181,10 @@ function PatientForm({doctorId}){
         "Biliyorlar ama kararsızlar":"They know but are unsure",
         "Karşılar":"They're against it",
         "Kimseye söylemedim":"I haven't told anyone"}},
-      revision:{label:"How do you feel about the possibility of revision?",options:{
-        "Evet, olası revizyonu normal karşılarım":"I accept it as normal — every surgery has risks",
-        "Revizyon beni endişelendiriyor":"It worries me but I still want to proceed",
-        "Kusursuz sonuç bekliyorum":"I expect a perfect result"}},
+      revision:{label:"How would you describe your expectations for the result?",options:{
+        "Evet, olası revizyonu normal karşılarım":"A natural improvement is enough for me",
+        "Revizyon beni endişelendiriyor":"I expect a noticeable change",
+        "Kusursuz sonuç bekliyorum":"I expect a flawless result"}},
       sharing:{label:"Would you share a positive experience with others?",options:{
         "Evet, açıkça paylaşırım":"Yes, I'd share openly",
         "Sadece çok yakınlarımla":"Only with close friends/family",
@@ -2803,7 +2814,7 @@ function PatientForm({doctorId}){
   };
 
   function t(key,fallback){if(lang==="tr") return fallback; const parts=key.split("."); let v=EN; for(const p of parts){v=v?.[p]; if(!v) return fallback;} return v;}
-  function tOpt(qId,opt){if(lang==="tr") return opt; if(qId==="procedure") return EN.procs?.[opt]||opt; return EN.q?.[qId]?.options?.[opt]||opt;}
+  function tOpt(qId,opt){if(lang==="tr") return TR_DISPLAY_OVERRIDES[qId]?.options?.[opt]||opt; if(qId==="procedure") return EN.procs?.[opt]||opt; return EN.q?.[qId]?.options?.[opt]||opt;}
   function tSec(sec){if(lang==="tr") return sec; return EN.sections?.[sec]||sec;}
   function tProc(proc){if(lang==="tr") return proc; return EN.procs?.[proc]||proc;}
   const [doctorInfo,setDoctorInfo]=useState(null);
@@ -3300,7 +3311,7 @@ Türkçe yaz.`}]
           </div>
         </div>
         <div style={{background:"#f8fafd",border:`1.5px solid ${C.border}`,borderRadius:14,padding:"24px 22px",marginBottom:14}} className="f3">
-          <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:300,color:C.navy,marginBottom:20,lineHeight:1.35,letterSpacing:"-0.01em"}}>{t(`q.${q.id}.label`,q.label)}</div>
+          <div style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:300,color:C.navy,marginBottom:20,lineHeight:1.35,letterSpacing:"-0.01em"}}>{t(`q.${q.id}.label`,TR_DISPLAY_OVERRIDES[q.id]?.label||q.label)}</div>
           {q.type==="text"&&<input type="text" placeholder={q.placeholder} value={answers[q.id]||""} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} style={{width:"100%",padding:"12px 14px",background:"#eef3f9",border:`1.5px solid ${C.border}`,borderRadius:10,color:C.navy,fontSize:15,outline:"none"}}/>}
           {q.type==="number"&&<input type="number" placeholder={q.placeholder} value={answers[q.id]||""} onChange={e=>setAnswers(p=>({...p,[q.id]:e.target.value}))} style={{width:"100%",padding:"12px 14px",background:"#eef3f9",border:`1.5px solid ${C.border}`,borderRadius:10,color:C.navy,fontSize:15,outline:"none"}}/>}
           {q.type==="radio"&&(
