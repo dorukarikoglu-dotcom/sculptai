@@ -25,7 +25,7 @@ function json(statusCode, body) {
   };
 }
 
-exports.handler = async (event) => {
+const handler = async (event) => {
   if (event.httpMethod !== "GET") return json(405, { error: "method_not_allowed" });
   if (!SERVICE_KEY) return json(500, { error: "server_misconfigured" });
 
@@ -48,3 +48,5 @@ exports.handler = async (event) => {
     return json(500, { error: "internal_error" });
   }
 };
+
+export { handler };
