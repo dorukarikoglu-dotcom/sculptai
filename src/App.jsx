@@ -776,10 +776,7 @@ function PatientCard({patient,onDelete,isMobile,scoreBands}){
   if(highProcRisk_c) nba.push({icon:"⭐",txt:"Uzmanlık vurgula — karmaşık prosedür, doktorun deneyimini ön plana çıkar"});
   if(nba.length===0) nba.push({icon:"✓",txt:"Standart takip — belirgin engel yok"});
 
-  const approachLabel=cls.cat==="red"?"Dikkatli yaklaş":cls.cat==="amber"?"Orta":"Yüksek potansiyel";
   const approachColor=cls.cat==="red"?"#dc2626":cls.cat==="amber"?"#d97706":"#059669";
-  const approachBg=cls.cat==="red"?"#fef2f2":cls.cat==="amber"?"#fffbeb":"#ecfdf5";
-  const approachBorder=cls.cat==="red"?"#fecaca":cls.cat==="amber"?"#fde68a":"#a7f3d0";
   const pipelineStatus=noAppointment?"lost":outcomeProcedures.length>0?(hadProcedure===true?"converted":"appointment"):"new";
   const sourceLabel=a.source||"";
   const dateStr=patient.created_at?new Date(patient.created_at).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):"";
