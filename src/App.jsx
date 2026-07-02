@@ -398,9 +398,6 @@ function classify(score,a,threshold=V6B_THRESHOLD,bands=null){
   // bands={p33,p67} → persentil bantları (kliniğe göre), yoksa sabit threshold kullanır
   const redLine=bands?bands.p67:threshold;
   const amberLine=bands?bands.p33:Math.round(threshold*0.65);
-  // Marka elçisi — yeni sorular + düşük risk
-  // ML tabanlı elçi skoru
-
   // Risk sinyalleri
   const bddRisk=a.bddScreen==="Günde saatlerce düşünüyorum, sosyal hayatımı etkiliyor"||a.bddScreen==="Tamamen ele geçirdi, kaçınma davranışlarım var"||a.bodyFocus==="Neredeyse her gün, bazen işimi gücümü etkiliyor"||a.avoidance==="Günlük hayatımı önemli ölçüde kısıtlıyor";
   const highExp=a.expectation?.includes("Tamamen farklı");
@@ -1797,29 +1794,21 @@ const PROFILE_CONTENT={
     welcome:"Araştırmanız bize de gösteriyor. Aşağıdaki bilgiler klinik verilerle desteklenmiştir — konsültasyonda detayları doktorunuzla birlikte değerlendirebilirsiniz.",
     recoveryIntro:"İyileşme süreci, kullanılan teknik ve yapısal faktörlere göre değişkenlik gösterir. Aşağıda aşama aşama ne bekleyebileceğinizi bulabilirsiniz.",
     riskIntro:"Her cerrahi girişimde görülme sıklığı istatistiksel olarak düşük olan riskler mevcuttur. Bunları bilmek, süreçte daha bilinçli kararlar almanızı sağlar.",
-    ambassadorMsg:"Veriye dayalı bir karar aldınız. Çevrenizde benzer titizlikle araştırma yapan biri varsa, SculptAI değerlendirme formunu önererek doğru kanaldan başlamalarına yardımcı olabilirsiniz.",
-    ambassadorCTA:"Araştırmacı birine önerin",
   },
   trustseeker:{
     welcome:"Bu kararı vermek cesaret ister. Sorularınız, endişeleriniz, hatta bilmediğinizi düşündüğünüz şeyler — konsültasyonun tam da bunlar için olduğunu bilmenizi isteriz.",
     recoveryIntro:"İyileşme süreci adım adım ilerler. Her aşamada ne hissedeceğinizi ve ne yapmanız gerektiğini önceden bilmek süreci çok kolaylaştırır.",
     riskIntro:"Her ameliyatta bazı beklenmedik durumlar yaşanabilir — ama bunların büyük çoğunluğu geçicidir ve tedavi edilebilir. Doktorunuz her adımda yanınızda olacak.",
-    ambassadorMsg:"Çevrenizdeki biri bu kararı vermeye çalışıyorsa, deneyiminizi paylaşmak ona büyük destek olabilir. Referans kodunuzla gelen her kişi için size özel bir teşekkür hazırladık.",
-    ambassadorCTA:"Desteğe ihtiyacı olana önerin",
   },
   social:{
     welcome:"Çevrenizde estetik kararlarda başvurulan biri olduğunuzu görüyoruz. Bu deneyimi yaşarken yakın çevrenizi de doğru yönlendirme fırsatınız olacak.",
     recoveryIntro:"Süreçte nasıl görüneceğinizi ve ne zaman sosyal hayata döneceğinizi merak ediyorsanız — aşağıdaki takvim tam size göre.",
     riskIntro:"Süreç hakkında çevrenizle konuşurken doğru bilgiye sahip olmak önemli. İşte bilmeniz ve paylaşabilmeniz gerekenler.",
-    ambassadorMsg:"Marka Elçisi programımıza hoş geldiniz. Kodunuzu paylaştığınızda getirdiğiniz her hasta için VIP konsültasyon önceliği, özel kontrol muayenesi ve klinik avantajları kazanırsınız.",
-    ambassadorCTA:"Özel avantajları görün",
   },
   pragmatic:{
     welcome:"Süreç net ve öngörülebilir. İşte bilmeniz gereken her şey — kısa ve öz.",
     recoveryIntro:"Takvim: ne zaman ne olur, ne zaman işe dönersiniz.",
     riskIntro:"Dikkat etmeniz gereken 3 durum:",
-    ambassadorMsg:"Referans kodunuzu paylaşırsanız getirdiğiniz kişi başına avantaj kazanırsınız.",
-    ambassadorCTA:"Hızlıca paylaşın",
   },
 };
 
@@ -1828,29 +1817,21 @@ const EN_PROFILE_CONTENT={
     welcome:"Your research shows. The information below is supported by clinical data — you can discuss the details with your doctor during your consultation.",
     recoveryIntro:"The recovery process varies depending on the technique used and structural factors. Below you'll find what to expect at each stage.",
     riskIntro:"Every surgical procedure carries statistically low-frequency risks. Knowing them helps you make more informed decisions throughout the process.",
-    ambassadorMsg:"You made a data-driven decision. If someone in your circle researches with similar thoroughness, recommending the SculptAI assessment form can help them start through the right channel.",
-    ambassadorCTA:"Recommend to a researcher",
   },
   trustseeker:{
     welcome:"Making this decision takes courage. Your questions, concerns, even things you think you don't know — we want you to know that's exactly what the consultation is for.",
     recoveryIntro:"The recovery process progresses step by step. Knowing what you'll feel and what to do at each stage makes the process much easier.",
     riskIntro:"Some unexpected situations can occur with any surgery — but the vast majority are temporary and treatable. Your doctor will be with you every step of the way.",
-    ambassadorMsg:"If someone in your life is trying to make this decision, sharing your experience can be a great support. We've prepared a special thank-you for each person who comes with your referral code.",
-    ambassadorCTA:"Recommend to someone who needs support",
   },
   social:{
     welcome:"We see that you're someone people in your circle turn to for aesthetic decisions. As you go through this experience, you'll have the opportunity to guide those close to you.",
     recoveryIntro:"If you're wondering how you'll look during the process and when you'll return to social life — the timeline below is made for you.",
     riskIntro:"Having accurate information when talking about the process with your circle is important. Here's what you need to know and can share.",
-    ambassadorMsg:"Welcome to our Brand Ambassador program. When you share your code, you earn VIP consultation priority, special follow-up appointments, and clinic benefits for each patient you bring.",
-    ambassadorCTA:"See exclusive benefits",
   },
   pragmatic:{
     welcome:"The process is clear and predictable. Here's everything you need to know — short and sweet.",
     recoveryIntro:"Timeline: when what happens, when you return to work.",
     riskIntro:"3 situations to watch for:",
-    ambassadorMsg:"Share your referral code and earn benefits for each person you refer.",
-    ambassadorCTA:"Share quickly",
   },
 };
 
@@ -2829,7 +2810,6 @@ function PatientForm({doctorId}){
   function tSec(sec){if(lang==="tr") return sec; return EN.sections?.[sec]||sec;}
   function tProc(proc){if(lang==="tr") return proc; return EN.procs?.[proc]||proc;}
   const [doctorInfo,setDoctorInfo]=useState(null);
-  const [ambassadorCode,setAmbassadorCode]=useState(null);
   const [patientSegment,setPatientSegment]=useState(null);
   const [personalGuide,setPersonalGuide]=useState(null);
   const [guideLoading,setGuideLoading]=useState(false);
@@ -2912,7 +2892,6 @@ function PatientForm({doctorId}){
       modelSource = "global_v5_fallback";
     }
     const cls=classify(score,answers);
-    const ambCode=cls.ambassador?"REF-"+Math.random().toString(36).substr(2,4).toUpperCase():null;
     const timingData={questionTimes,questionChanges};
     const slowQuestions=Object.entries(questionTimes).filter(([,s])=>s>30).map(([id])=>id);
     const changedQuestions=Object.entries(questionChanges).filter(([,c])=>c>0).map(([id,c])=>`${id}(${c}x)`);
@@ -2931,7 +2910,7 @@ function PatientForm({doctorId}){
       risk_score:score,
       segment:cls.label,
       answers:safeAnswers,
-      ambassador_code:ambCode||"",
+      ambassador_code:"",
       ambassador_sent:false,
       outcome_procedures:[],
       no_appointment:false,
@@ -2949,7 +2928,6 @@ function PatientForm({doctorId}){
 
     setSubmitted(true);
     setSubmitting(false);
-    setAmbassadorCode(ambCode);
     setPatientSegment(cls);
     fetchPersonalGuide(answers,score,cls,slowQuestions,changedQuestions);
   }
@@ -3687,7 +3665,7 @@ function AdminPanel(){
     try{
       const [r1,r2,r3]=await Promise.all([
         sb.from("doctors").select("id,name,username,clinic_name"),
-        sb.from("patients").select("id,doctor_id,created_at,risk_score,segment,outcome_procedures,no_appointment,ambassador_code,ambassador_sent,had_procedure,procedure_date,satisfaction_1m,satisfaction_6m,would_recommend,had_revision,revision_reason,referred_count,referral_source,answers"),
+        sb.from("patients").select("id,doctor_id,created_at,risk_score,segment,outcome_procedures,no_appointment,had_procedure,procedure_date,satisfaction_1m,satisfaction_6m,would_recommend,had_revision,revision_reason,referred_count,referral_source,answers"),
         Promise.resolve(sb.from("clinic_models").select("doctor_id,version,threshold,threshold_src,n_train,label_count,n_neg,neg_count,accuracy,val_accuracy,val_f1,val_precision,val_recall,train_date,updated_at,is_active")).catch(()=>({data:[]})),
       ]);
       if(r1.error) setLoadError("Doctors hatası: "+JSON.stringify(r1.error));
@@ -3756,7 +3734,6 @@ function AdminPanel(){
     const withOutcome=dp.filter(p=>p.outcome_procedures?.length>0);
     const donusum=total?Math.round(withOutcome.length/total*100):0;
     const crossSell=dp.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length;
-    const ambassadors=dp.filter(p=>p.ambassador_code&&p.ambassador_code!=="").length;
     // ML doğruluğu — kırmızı + randevu yok
     const redPats=dp.filter(p=>(p.risk_score||0)>=68);
     const redNoAppt=redPats.filter(p=>p.no_appointment).length;
@@ -3767,7 +3744,7 @@ function AdminPanel(){
     const lastActive=dates.length>0?new Date(Math.max(...dates)).toLocaleDateString("tr-TR",{day:"numeric",month:"short"}):"—";
     // Aktif mi? Son 30 gün
     const isActive=dates.some(d=>(Date.now()-d.getTime())<30*86400000);
-    return{...doc,total,critical,noAppt,donusum,crossSell,ambassadors,mlAcc,lastActive,isActive};
+    return{...doc,total,critical,noAppt,donusum,crossSell,mlAcc,lastActive,isActive};
   });
 
   const total={
@@ -3776,7 +3753,6 @@ function AdminPanel(){
     noAppt:patients.filter(p=>p.no_appointment).length,
     withOutcome:patients.filter(p=>p.outcome_procedures?.length>0).length,
     crossSell:patients.filter(p=>p.outcome_procedures?.length>0&&p.outcome_procedures.some(x=>x!==(p.answers?.procedure||""))).length,
-    ambassadors:patients.filter(p=>p.ambassador_code&&p.ambassador_code!=="").length,
   };
   const totalDonusum=total.patients?Math.round(total.withOutcome/total.patients*100):0;
 
