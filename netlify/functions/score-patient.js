@@ -272,14 +272,67 @@ function json(statusCode, body) {
   };
 }
 
+/* ─── Güvenlik katmanı: same-origin + rate limit + doctor_id doğrulama ────
+   Endpoint halka açık hasta formundan anonim çağrılır; login şartı yerine
+   origin kontrolü ve IP başına limit uygulanır. */
+const MAX_BODY_BYTES = 50000;
+const RATE_LIMIT = 30;
+const RATE_WINDOW_MS = 10 * 60 * 1000;
+const ipHits = new Map();
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const hits = (ipHits.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_LIMIT) { ipHits.set(ip, hits); return true; }
+  hits.push(now);
+  ipHits.set(ip, hits);
+  if (ipHits.size > 5000) ipHits.clear();
+  return false;
+}
+
+function sameOrigin(event) {
+  const origin = event.headers.origin || event.headers.Origin;
+  const host = event.headers.host || event.headers.Host;
+  if (!origin || !host) return false;
+  try { return new URL(origin).host === host; } catch { return false; }
+}
+
+// doctor_id var mı — lambda instance ömrü boyunca cache'lenir
+const doctorExistsCache = {};
+async function doctorExists(doctorId) {
+  if (doctorExistsCache[doctorId] !== undefined) return doctorExistsCache[doctorId];
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/doctors?id=eq.${encodeURIComponent(doctorId)}&select=id&limit=1`,
+      { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
+    );
+    const data = await res.json();
+    const exists = Array.isArray(data) && data.length > 0;
+    doctorExistsCache[doctorId] = exists;
+    return exists;
+  } catch {
+    return true; // Supabase erişilemezse skorlamayı bloklamayalım (fail-open)
+  }
+}
+
 const handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "method_not_allowed" });
   if (!SERVICE_KEY) return json(500, { error: "server_misconfigured" });
+  if (!sameOrigin(event)) return json(403, { error: "forbidden_origin" });
+
+  const ip = event.headers["x-nf-client-connection-ip"] || event.headers["client-ip"] || "unknown";
+  if (rateLimited(ip)) return json(429, { error: "rate_limited" });
+  if ((event.body || "").length > MAX_BODY_BYTES) return json(413, { error: "body_too_large" });
 
   let body;
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "bad_request" }); }
   const { doctor_id, answers } = body;
   if (!answers || typeof answers !== "object") return json(400, { error: "missing_answers" });
+  if (doctor_id !== undefined && doctor_id !== null) {
+    if (typeof doctor_id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(doctor_id))
+      return json(400, { error: "bad_doctor_id" });
+    if (!(await doctorExists(doctor_id))) return json(400, { error: "unknown_doctor" });
+  }
 
   let score, modelSource = "global_v6b";
   try {
