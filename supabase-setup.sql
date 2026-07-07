@@ -4,9 +4,10 @@
 -- 1. Doktorlar tablosu
 create table doctors (
   id text primary key,           -- örn: "dr-ahmet"
+  auth_id uuid,                  -- Supabase Auth kullanıcı id'si (RLS eşleşmesi)
   name text not null,            -- örn: "Dr. Ahmet Yılmaz"
   username text unique not null, -- giriş kullanıcı adı
-  password_hash text not null,   -- şifre (düz metin, sonra hash'lenebilir)
+  password_hash text not null,   -- legacy alan; Auth'a geçen hesaplarda "managed_by_auth"
   created_at timestamptz default now()
 );
 
@@ -31,15 +32,35 @@ create table patients (
   created_at timestamptz default now()
 );
 
--- 3. Güvenlik: Herkes okuyabilsin/yazabilsin (basit versiyon)
+-- 3. Güvenlik: RLS — hasta formu (anon) yalnız INSERT; okuma/yazma sahibi
+--    doktora ve admin'e açık. Detay ve mevcut kuruluma migrasyon:
+--    supabase-rls-fix.sql
 alter table doctors enable row level security;
 alter table patients enable row level security;
 
-create policy "doctors_public" on doctors for select using (true);
-create policy "patients_insert" on patients for insert with check (true);
-create policy "patients_select" on patients for select using (true);
-create policy "patients_delete" on patients for delete using (true);
-create policy "patients_update" on patients for update using (true);
+create policy "doctors_select_own" on doctors for select to authenticated
+  using (auth_id = auth.uid() or (auth.jwt()->>'email') = 'admin@sculptai.health');
+create policy "doctors_update_own" on doctors for update to authenticated
+  using      (auth_id = auth.uid() or (auth.jwt()->>'email') = 'admin@sculptai.health')
+  with check (auth_id = auth.uid() or (auth.jwt()->>'email') = 'admin@sculptai.health');
+create policy "doctors_insert_self" on doctors for insert to authenticated
+  with check (auth_id = auth.uid() or (auth.jwt()->>'email') = 'admin@sculptai.health');
+create policy "doctors_delete_admin" on doctors for delete to authenticated
+  using ((auth.jwt()->>'email') = 'admin@sculptai.health');
+
+create policy "patients_insert_public" on patients for insert to anon, authenticated
+  with check (doctor_id is not null);
+create policy "patients_select_own" on patients for select to authenticated
+  using (doctor_id in (select id from doctors where auth_id = auth.uid())
+         or (auth.jwt()->>'email') = 'admin@sculptai.health');
+create policy "patients_update_own" on patients for update to authenticated
+  using      (doctor_id in (select id from doctors where auth_id = auth.uid())
+              or (auth.jwt()->>'email') = 'admin@sculptai.health')
+  with check (doctor_id in (select id from doctors where auth_id = auth.uid())
+              or (auth.jwt()->>'email') = 'admin@sculptai.health');
+create policy "patients_delete_own" on patients for delete to authenticated
+  using (doctor_id in (select id from doctors where auth_id = auth.uid())
+         or (auth.jwt()->>'email') = 'admin@sculptai.health');
 
 -- 4. Örnek doktorlar (sonra değiştirebilirsin)
 insert into doctors (id, name, username, password_hash) values
