@@ -2700,7 +2700,7 @@ function PatientForm({doctorId}){
       setGuideLoading(true);
       if(!canCallAPI()){setGuideLoading(false);return;}
       const res=await fetch("/api/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({
-        model:"claude-sonnet-4-20250514",
+        model:"claude-sonnet-4-6",
         max_tokens:800,
         messages:[{role:"user",content:`Sen empati yeteneği çok yüksek, klinik deneyimli bir hasta koordinatörüsün. ${doctorInfo?.clinic_name||"Plastik Cerrahi Kliniği"}'nde çalışıyorsun.
 

@@ -6,7 +6,7 @@
  */
 
 // Client yalnız bu modeli kullanıyor (App.jsx guide üretimi) — başka model kabul etme
-const ALLOWED_MODELS = new Set(["claude-sonnet-4-20250514"]);
+const ALLOWED_MODELS = new Set(["claude-sonnet-4-6"]);
 const MAX_TOKENS_CAP = 1000;
 const MAX_MESSAGES = 10;
 const MAX_TOTAL_CHARS = 20000;
