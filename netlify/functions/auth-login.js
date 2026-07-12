@@ -16,7 +16,9 @@ const ANON_KEY = process.env.SUPABASE_ANON_KEY ||
 
 const AUTH_EMAIL_DOMAIN = "sculptai.health";
 // Hastaya/panele dönen güvenli kolonlar — password_hash YOK
-const SAFE_DOCTOR_COLS = "id,auth_id,name,username,clinic_name,enabled_procedures,avg_revenue,primary_color,photo_url";
+// NOT: avg_revenue kolonu doctors tablosunda YOK — listede bırakmak PostgREST 400
+// verdiriyordu (getDoctorBy null → invalid() → herkese "şifre hatalı").
+const SAFE_DOCTOR_COLS = "id,auth_id,name,username,clinic_name,enabled_procedures,primary_color,photo_url";
 
 function json(statusCode, body) {
   return {
@@ -79,7 +81,13 @@ async function getDoctorBy(col, val) {
   const { status, data } = await supaRest(
     `doctors?${col}=eq.${encodeURIComponent(val)}&select=${SAFE_DOCTOR_COLS},password_hash&limit=1`
   );
-  if (status !== 200 || !Array.isArray(data) || !data.length) return null;
+  if (status !== 200) {
+    // Sessiz null yok: PostgREST hata gövdesini logla (eksik kolon vb. görünür olsun)
+    console.error(`getDoctorBy(${col}) PostgREST HTTP ${status}:`,
+      typeof data === "string" ? data : JSON.stringify(data));
+    return null;
+  }
+  if (!Array.isArray(data) || !data.length) return null;
   return data[0];
 }
 
