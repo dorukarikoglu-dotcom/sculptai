@@ -126,33 +126,35 @@ const handler = async (event) => {
       });
     }
 
-    // ── 2. Legacy login (migrasyon) ────────────────────────────────────────
+    // ── 2. Legacy login — YALNIZCA gerçek parola kanıtıyla ─────────────────
+    // Placeholder ("migrated_to_auth" / "managed_by_auth") KABUL EDİLMEZ:
+    // Auth kayıtlı hesaplar yalnızca path 1 ile girer. Buraya sadece gerçek
+    // legacy hash'i (veya düz metin parolayı) tutan hesaplar düşebilir; yani
+    // authAdminCreateUser yalnız parolasını kanıtlayan kullanıcı için çalışır.
     const legacy = await getDoctorBy("username", username);
     if (!legacy) return invalid();
     const hashed = await sha256(password + "_sculptai_salt_2026");
-    const legacyOk =
+    const passwordProven =
       legacy.password_hash === hashed ||
-      legacy.password_hash === password ||
-      legacy.password_hash === "migrated_to_auth";
-    if (!legacyOk) return invalid();
+      legacy.password_hash === password;
+    if (!passwordProven) return invalid();
 
-    // Auth kullanıcısı oluştur (varsa signIn zaten 1. adımda başarılı olurdu)
-    let session = null;
-    let authUserId = null;
+    // Parola kanıtlandı → Auth'a taşı ve oturum aç.
     const created = await authAdminCreateUser(email, password);
-    if (created?.id) {
-      authUserId = created.id;
-      const auth2 = await authSignIn(email, password);
-      if (auth2?.access_token) session = { access_token: auth2.access_token, refresh_token: auth2.refresh_token };
-    }
-    if (authUserId) {
-      await supaRest(`doctors?id=eq.${encodeURIComponent(legacy.id)}`, {
-        method: "PATCH",
-        body: { auth_id: authUserId, password_hash: "migrated_to_auth" },
-        prefer: "return=minimal",
-      });
-      legacy.auth_id = authUserId;
-    }
+    if (!created?.id) return json(500, { error: "auth_provisioning_failed" });
+    const auth2 = await authSignIn(email, password);
+    if (!auth2?.access_token) return json(500, { error: "auth_provisioning_failed" });
+    const session = { access_token: auth2.access_token, refresh_token: auth2.refresh_token };
+
+    // Yalnızca geçerli session üretildiyse buraya gelinir — 200+doctor'u
+    // session'sız DÖNDÜRMÜYORUZ (istemci onLogin ile oturum açıyor).
+    await supaRest(`doctors?id=eq.${encodeURIComponent(legacy.id)}`, {
+      method: "PATCH",
+      body: { auth_id: created.id, password_hash: "migrated_to_auth" },
+      prefer: "return=minimal",
+    });
+    legacy.auth_id = created.id;
+
     return json(200, { doctor: stripDoctor(legacy), session });
   } catch (e) {
     console.error("auth-login error:", e.message);
