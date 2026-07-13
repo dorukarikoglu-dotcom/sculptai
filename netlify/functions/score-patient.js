@@ -297,21 +297,25 @@ function sameOrigin(event) {
   try { return new URL(origin).host === host; } catch { return false; }
 }
 
-// doctor_id var mı — lambda instance ömrü boyunca cache'lenir
-const doctorExistsCache = {};
-async function doctorExists(doctorId) {
-  if (doctorExistsCache[doctorId] !== undefined) return doctorExistsCache[doctorId];
+// doctor_id (UUID veya username) → kanonik doctors.id; bulunamazsa null.
+// Sistem karışık: bazı doktorların id'si "dr-ahmet" (username DEĞİL, id), bazılarınınki
+// UUID + username "dr-tuba". Bu yüzden HER İKİ kolonu da ararız (or=id,username) ve
+// kanonik id'yi döndürürüz — insert/panel/clinic_model hep aynı id'yle çalışsın diye.
+// Lambda instance ömrü boyunca cache'lenir.
+const doctorIdCache = {};
+async function resolveDoctorId(value) {
+  if (doctorIdCache[value] !== undefined) return doctorIdCache[value];
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/doctors?id=eq.${encodeURIComponent(doctorId)}&select=id&limit=1`,
+      `${SUPABASE_URL}/rest/v1/doctors?or=(id.eq.${encodeURIComponent(value)},username.eq.${encodeURIComponent(value)})&select=id&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
     const data = await res.json();
-    const exists = Array.isArray(data) && data.length > 0;
-    doctorExistsCache[doctorId] = exists;
-    return exists;
+    const id = (Array.isArray(data) && data[0] && data[0].id) ? data[0].id : null;
+    doctorIdCache[value] = id;
+    return id;
   } catch {
-    return true; // Supabase erişilemezse skorlamayı bloklamayalım (fail-open)
+    return value; // Supabase erişilemezse skorlamayı bloklamayalım (fail-open, gelen değeri kullan)
   }
 }
 
@@ -328,18 +332,20 @@ const handler = async (event) => {
   try { body = JSON.parse(event.body || "{}"); } catch { return json(400, { error: "bad_request" }); }
   const { doctor_id, answers } = body;
   if (!answers || typeof answers !== "object") return json(400, { error: "missing_answers" });
+  let canonicalDoctorId = null;
   if (doctor_id !== undefined && doctor_id !== null) {
     if (typeof doctor_id !== "string" || !/^[A-Za-z0-9_-]{1,64}$/.test(doctor_id))
       return json(400, { error: "bad_doctor_id" });
-    if (!(await doctorExists(doctor_id))) return json(400, { error: "unknown_doctor" });
+    canonicalDoctorId = await resolveDoctorId(doctor_id);
+    if (!canonicalDoctorId) return json(400, { error: "unknown_doctor" });
   }
 
   let score, modelSource = "global_v6b";
   try {
     score = computeV6bScore(answers).riskScore;
 
-    if (doctor_id) {
-      const clinicModel = await loadClinicModel(doctor_id);
+    if (canonicalDoctorId) {
+      const clinicModel = await loadClinicModel(canonicalDoctorId);
       if (clinicModel && clinicModel.weights) {
         const clinicScore = Math.round(computeScoreWithModel(answers, clinicModel.weights));
         score = Math.round(score * 0.70 + clinicScore * 0.30);
@@ -351,7 +357,9 @@ const handler = async (event) => {
     modelSource = "global_v5_fallback";
   }
 
-  return json(200, { score, model_source: modelSource });
+  // doctor_id kanonik id olarak da dönüyor — istemci insert'te bunu kullanarak
+  // patients.doctor_id'yi panelin/RLS'in beklediği id ile tutarlı yazabilir.
+  return json(200, { score, model_source: modelSource, doctor_id: canonicalDoctorId });
 };
 
 export { handler };

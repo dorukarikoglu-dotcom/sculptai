@@ -32,12 +32,14 @@ const handler = async (event) => {
   const doctor = String(event.queryStringParameters?.doctor || "").trim();
   if (!doctor) return json(400, { error: "missing_doctor" });
 
-  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(doctor);
-  const col = isUUID ? "id" : "username";
+  // Değer id de olabilir username de: bazı doktorların id'si "dr-ahmet" gibi (UUID değil),
+  // bazılarınınki UUID + username "dr-tuba". Bu yüzden her iki kolonu birden ararız.
+  // or= injection'a duyarlı olduğundan yalnız güvenli karakterlere izin ver.
+  if (!/^[A-Za-z0-9_-]{1,64}$/.test(doctor)) return json(400, { error: "bad_doctor" });
 
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/doctors?${col}=eq.${encodeURIComponent(doctor)}&select=${PUBLIC_COLS}&limit=1`,
+      `${SUPABASE_URL}/rest/v1/doctors?or=(id.eq.${encodeURIComponent(doctor)},username.eq.${encodeURIComponent(doctor)})&select=${PUBLIC_COLS}&limit=1`,
       { headers: { apikey: SERVICE_KEY, Authorization: `Bearer ${SERVICE_KEY}` } }
     );
     const data = await res.json();
