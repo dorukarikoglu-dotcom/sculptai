@@ -2624,7 +2624,7 @@ function PatientForm({doctorId}){
       expectation:answers.expectation,multiDoctor:answers.multiDoctor,age:answers.age,
       decisionDuration:answers.decisionDuration,bddScreen:answers.bddScreen,
     };
-    let score=null, modelSource="server";
+    let score=null, modelSource="server", canonicalDoctorId=null;
     for(let attempt=0;attempt<3;attempt++){
       try{
         const res=await fetch("/api/score-patient",{
@@ -2635,6 +2635,7 @@ function PatientForm({doctorId}){
         if(res.ok){
           const d=await res.json();
           score=d.score; modelSource=d.model_source||"server";
+          canonicalDoctorId=d.doctor_id||null; // kanonik doctors.id (username→id çözümü)
           break;
         }
       }catch(e){}
@@ -2650,15 +2651,19 @@ function PatientForm({doctorId}){
     const slowQuestions=Object.entries(questionTimes).filter(([,s])=>s>30).map(([id])=>id);
     const changedQuestions=Object.entries(questionChanges).filter(([,c])=>c>0).map(([id,c])=>`${id}(${c}x)`);
 
-    // İsmi şifrele
-    const encryptedName=await encryptName(answers.name||"",doctorId||"default");
-    const encryptedGender=await encryptName(answers.gender||"",doctorId||"default");
-    const encryptedStory=answers.openStory?await encryptName(answers.openStory,doctorId||"default"):"";
+    // Kanonik doctors.id — insert, şifreleme anahtarı ve panel HEP aynı id'yi kullansın.
+    // URL username taşısa bile (ör. /form/dr-tuba) lead doğru doktora, adı da OKUNUR düşsün.
+    // Fallback: canonical dönmezse ham değere düşülür (lead kaybetmemek için — bkz. rapor).
+    const effectiveDoctorId=canonicalDoctorId||doctorId;
+    // İsmi şifrele (anahtar seed = effectiveDoctorId; panel decrypt'i doctor.id ile yapıyor)
+    const encryptedName=await encryptName(answers.name||"",effectiveDoctorId||"default");
+    const encryptedGender=await encryptName(answers.gender||"",effectiveDoctorId||"default");
+    const encryptedStory=answers.openStory?await encryptName(answers.openStory,effectiveDoctorId||"default"):"";
     const safeAnswers={...answers,name:encryptedName,gender:encryptedGender,openStory:encryptedStory,kvkk_consent:true,kvkk_date:new Date().toISOString()};
 
     const rec={
       id:crypto.randomUUID?crypto.randomUUID():Date.now().toString(),
-      doctor_id:doctorId,
+      doctor_id:effectiveDoctorId,
       date:new Date().toISOString(),
       created_at:new Date().toISOString(),
       risk_score:score,
