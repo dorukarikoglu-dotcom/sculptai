@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RötarHakkım — Uçuş Tazminatını 60 Saniyede Kontrol Et</title>
+  <meta name="description" content="Uçuşunuz gecikti, iptal edildi veya uçağa alınmadınız mı? SHY-YOLCU kapsamında olası tazminatınızı ücretsiz kontrol edin. Başvuru paketinizi tek seferlik ücretle hazırlayın." />
+  <meta name="robots" content="index,follow" />
+  <meta property="og:title" content="RötarHakkım — €600'a kadar hakkını kontrol et" />
+  <meta property="og:description" content="Komisyon vermeden, kendi uçuş tazminatı başvurunu hazırla." />
+  <style>
+    :root{--ink:#101828;--muted:#667085;--line:#e4e7ec;--bg:#f8fafc;--card:#fff;--accent:#155eef;--good:#067647;--warn:#b54708;--bad:#b42318}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+    a{color:inherit}.wrap{max-width:980px;margin:0 auto;padding:0 20px}.nav{height:70px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;letter-spacing:-.03em;font-size:20px}.badge{font-size:12px;border:1px solid var(--line);background:#fff;padding:6px 10px;border-radius:999px;color:var(--muted)}
+    .hero{padding:64px 0 42px;text-align:center}.kicker{font-size:13px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.08em}.hero h1{font-size:clamp(38px,7vw,70px);line-height:1.02;letter-spacing:-.055em;margin:14px auto 18px;max-width:850px}.hero p{font-size:19px;color:var(--muted);max-width:670px;margin:0 auto}.trust{display:flex;flex-wrap:wrap;justify-content:center;gap:16px;margin-top:24px;color:#475467;font-size:13px}
+    .grid{display:grid;grid-template-columns:1.1fr .9fr;gap:22px;align-items:start}.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:26px;box-shadow:0 8px 28px rgba(16,24,40,.05)}.card h2{margin:0 0 4px;letter-spacing:-.03em}.sub{color:var(--muted);font-size:14px;margin-bottom:22px}
+    label{display:block;font-size:13px;font-weight:700;margin:14px 0 7px}.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}select,input{width:100%;border:1px solid #d0d5dd;border-radius:10px;padding:12px 13px;background:#fff;font:inherit;color:var(--ink);outline:none}select:focus,input:focus{border-color:#84adff;box-shadow:0 0 0 4px #eff4ff}.btn{border:0;border-radius:11px;padding:13px 17px;font-weight:800;font-size:15px;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center}.primary{background:var(--accent);color:#fff;width:100%;margin-top:18px}.secondary{background:#101828;color:#fff;width:100%;margin-top:12px}.ghost{background:#f2f4f7;color:#344054;width:100%;margin-top:10px}
+    #result{display:none}.amount{font-size:46px;line-height:1;font-weight:850;letter-spacing:-.05em;margin:10px 0}.status{display:inline-flex;border-radius:999px;padding:6px 10px;font-size:12px;font-weight:800}.status.good{background:#ecfdf3;color:var(--good)}.status.warn{background:#fffaeb;color:var(--warn)}.status.bad{background:#fef3f2;color:var(--bad)}.resultText{color:#475467;margin:14px 0}.mini{font-size:12px;color:#667085}.steps{margin:20px 0 0;padding:0;list-style:none}.steps li{display:flex;gap:12px;padding:12px 0;border-top:1px solid #f2f4f7}.num{flex:0 0 26px;height:26px;border-radius:50%;background:#eff4ff;color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800}
+    .offer{margin-top:20px;background:#101828;color:#fff;border-radius:17px;padding:21px}.offer .price{font-size:32px;font-weight:850;letter-spacing:-.04em}.offer p{color:#d0d5dd;margin:4px 0 12px}.offer ul{color:#eaecf0;padding-left:19px;font-size:13px}.offer .secondary{background:#fff;color:#101828}.compare{padding:70px 0}.compare h2{text-align:center;font-size:34px;letter-spacing:-.04em}.table{max-width:760px;margin:24px auto;background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden}.tr{display:grid;grid-template-columns:1.2fr 1fr 1fr;padding:14px 18px;border-bottom:1px solid var(--line);font-size:14px}.tr:last-child{border-bottom:0}.tr.head{font-weight:800;background:#f9fafb}.ours{font-weight:800;color:var(--good)}
+    .legal{background:#fff;border-top:1px solid var(--line);padding:32px 0;margin-top:50px;color:#667085;font-size:12px}.legal strong{color:#344054}@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{padding-top:36px}.row{grid-template-columns:1fr}.tr{grid-template-columns:1.2fr .8fr .8fr;font-size:12px;padding:12px}.card{padding:20px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <nav class="nav"><div class="brand">RötarHakkım</div><div class="badge">SHY-YOLCU · Türkiye</div></nav>
+    <section class="hero">
+      <div class="kicker">Komisyon vermeden kendin başvur</div>
+      <h1>Uçuşun aksadıysa paranı masada bırakma.</h1>
+      <p>3+ saat gecikme, iptal veya uçağa alınmama durumunda €100–€600 arası tazminat hakkın olabilir. 60 saniyede ücretsiz kontrol et.</p>
+      <div class="trust"><span>✓ Kayıt gerektirmez</span><span>✓ Ücretsiz hak kontrolü</span><span>✓ Resmî SHY‑YOLCU kurallarına göre</span></div>
+    </section>
+
+    <section class="grid">
+      <div class="card">
+        <h2>Uçuşunu kontrol et</h2><div class="sub">Bu kontrol ön değerlendirmedir; nihai hak uçuşun gerçek koşullarına bağlıdır.</div>
+        <form id="calc">
+          <div class="row">
+            <div><label>Ne oldu?</label><select id="event" required><option value="">Seç</option><option value="delay">3+ saat gecikme</option><option value="cancel">Uçuş iptal edildi</option><option value="denied">Uçağa alınmadım / overbooking</option></select></div>
+            <div><label>Uçuş tipi</label><select id="scope" required><option value="">Seç</option><option value="domestic">İç hat</option><option value="international">Dış hat</option></select></div>
+          </div>
+          <div class="row">
+            <div><label>Varıştaki gecikme</label><select id="delay"><option value="3">3–4 saat</option><option value="5">5+ saat</option><option value="0">Gecikme yok / iptal</option></select></div>
+            <div><label>Uçuş mesafesi</label><select id="distance"><option value="short">0–1.500 km</option><option value="mid">1.500–3.500 km</option><option value="long">3.500+ km</option></select></div>
+          </div>
+          <label>Havayolunun söylediği neden</label><select id="reason"><option value="technical">Teknik / operasyonel neden</option><option value="weather">Hava koşulları / güvenlik / hava trafik kısıtı</option><option value="unknown">Neden belirtilmedi / emin değilim</option></select>
+          <div class="row">
+            <div><label>Uçuş numarası <span class="mini">(isteğe bağlı)</span></label><input id="flight" placeholder="TK1983" /></div>
+            <div><label>Uçuş tarihi <span class="mini">(isteğe bağlı)</span></label><input id="date" type="date" /></div>
+          </div>
+          <button class="btn primary" type="submit">Hakkımı ücretsiz kontrol et →</button>
+        </form>
+      </div>
+
+      <div class="card" id="resultCard">
+        <div id="empty"><h2>Sonucun burada görünecek</h2><p class="sub">Tutarı ve bir sonraki adımı anında göstereceğiz.</p><ul class="steps"><li><span class="num">1</span><div>Uçuş bilgilerini gir.</div></li><li><span class="num">2</span><div>Olası tazminat tutarını gör.</div></li><li><span class="num">3</span><div>İstersen başvuru paketini hazırla ve komisyon vermeden kendin gönder.</div></li></ul></div>
+        <div id="result">
+          <span id="status" class="status good">Olası hak bulundu</span>
+          <div id="amount" class="amount">€400</div>
+          <div id="resultText" class="resultText"></div>
+          <div class="mini">Resmî değerlendirmeyi havayolu/SHGM yapar. Olağanüstü durumlar ve uçuşa özgü koşullar sonucu değiştirebilir.</div>
+          <div class="offer">
+            <div style="font-size:12px;font-weight:800;color:#84adff;text-transform:uppercase;letter-spacing:.06em">DIY Başvuru Paketi</div>
+            <div class="price">299 TL <span style="font-size:13px;font-weight:500;color:#98a2b3">tek seferlik</span></div>
+            <p>Tazminatından yüzde vermek yerine başvurunu kendin yap.</p>
+            <ul><li>Kişiselleştirilmiş ilk başvuru metni</li><li>Havayolu reddederse yanıt taslağı</li><li>SHGM escalation metni + belge checklist'i</li><li>Uçuş bilgilerine göre talep edilen tutar</li></ul>
+            <a id="buy" class="btn secondary" href="/rotarhakkim/buy-intent.html">Başvuru paketimi hazırla →</a>
+          </div>
+          <button class="btn ghost" onclick="location.reload()">Başka uçuş kontrol et</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="compare">
+      <h2>Neden sabit ücret?</h2>
+      <div class="table"><div class="tr head"><div></div><div>Başarı ücretli şirket</div><div>RötarHakkım</div></div><div class="tr"><div>€400 tazminatta maliyet</div><div>€68–€120*</div><div class="ours">299 TL</div></div><div class="tr"><div>Tazminattan pay</div><div>%17–30*</div><div class="ours">%0</div></div><div class="tr"><div>Başvuruyu kim gönderir?</div><div>Şirket</div><div>Sen</div></div></div>
+      <div class="mini" style="text-align:center">*Piyasadaki örnek başarı ücreti modellerine göre karşılaştırma; şirketlere göre değişir.</div>
+    </section>
+  </div>
+
+  <footer class="legal"><div class="wrap"><strong>Önemli:</strong> RötarHakkım bağımsız bir self‑service bilgi ve belge hazırlama aracıdır; havayolu, SHGM veya hukuk bürosu değildir. Hukuki danışmanlık sunmaz ve tazminat garantisi vermez. SHGM'ye göre yolcu, önce ilgili hava taşıma işletmesine başvurmalıdır. Güncel resmî bilgi için <a href="https://web.shgm.gov.tr/tr/yolcu-haklari/7005-index" target="_blank" rel="noopener">SHGM Yolcu Hakları</a> sayfasını kontrol edin.</div></footer>
+
+<script>
+const calc=document.getElementById('calc');
+calc.addEventListener('submit',e=>{
+  e.preventDefault();
+  const event=document.getElementById('event').value, scope=document.getElementById('scope').value, delay=Number(document.getElementById('delay').value), distance=document.getElementById('distance').value, reason=document.getElementById('reason').value;
+  if(!event||!scope)return;
+  let amount=scope==='domestic'?100:(distance==='short'?250:distance==='mid'?400:600);
+  let state='good', label='Olası hak bulundu', text='';
+  if(reason==='weather') { state='bad'; label='Hak belirsiz / düşük olasılık'; text='Hava koşulları, güvenlik veya hava trafik kısıtları olağanüstü durum sayılabilir. Havayolunun gerekçesi ve uçuş kayıtları incelenmeden tazminat varsaymıyoruz.'; }
+  else if(event==='delay' && delay<3){state='bad';label='Bu bilgilerle görünmüyor';text='SHY‑YOLCU kapsamında teknik/operasyonel nedenli gecikmede 3 saat ve üzeri son varış gecikmesi kritik eşiktir.';}
+  else if(reason==='unknown'){state='warn';label='Potansiyel hak — neden doğrulanmalı';text=`Bu bilgilerle ${scope==='domestic'?'€100':`€${amount}`} seviyesinde potansiyel talep olabilir. Havayolundan gecikme/iptal nedenini yazılı istemek en doğru ilk adımdır.`;}
+  else { text=`Verdiğin bilgilere göre ${scope==='domestic'?'iç hat':'dış hat'} uçuşunda yaklaşık €${amount} seviyesinde tazminat talebi gündeme gelebilir. Başvuru önce uçuşu icra eden havayoluna yapılır.`; }
+  document.getElementById('empty').style.display='none'; document.getElementById('result').style.display='block';
+  const s=document.getElementById('status'); s.className='status '+state; s.textContent=label;
+  document.getElementById('amount').textContent=state==='bad'?'—':`€${amount}`; document.getElementById('resultText').textContent=text;
+  const params=new URLSearchParams({event,scope,distance,reason,flight:document.getElementById('flight').value||'',date:document.getElementById('date').value||'',amount:String(amount)});
+  document.getElementById('buy').href='/rotarhakkim/buy-intent.html?'+params.toString();
+  document.getElementById('resultCard').scrollIntoView({behavior:'smooth',block:'center'});
+});
+</script>
+</body>
+</html>
