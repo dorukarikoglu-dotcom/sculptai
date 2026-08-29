@@ -1,0 +1,29 @@
+{
+  "updatedAt": "2026-08-29T08:10:00Z",
+  "method": "Qualitative pretest score from current paid alternatives, willingness-to-pay signals, purchase intent clarity, AI fulfillability, distribution fit, saturation, and regulatory risk. This is a screening score, not market size or conversion data.",
+  "round1PoolTL": 5000,
+  "shortlist": [
+    {"id":"flightclaim","score":89,"allocationTL":1400,"why":"Extremely high-intent search moment; incumbent takes 35% of recovered compensation; clear money-saving wedge. Risk: passenger-rights/legal copy must stay self-service and accurate."},
+    {"id":"salaryask","score":86,"allocationTL":1100,"why":"High-stakes one-off moment with large economic upside; live AI alternatives charge from about EUR7.99 while human negotiation services charge hundreds to thousands. Strong value-to-price ratio."},
+    {"id":"weddingwords","score":84,"allocationTL":900,"why":"Deadline-driven emotional purchase; direct competitors publish one-time prices around $29-$49. Fulfillment is fully digital and immediate."},
+    {"id":"datingprofile","score":82,"allocationTL":900,"why":"Direct consumer pain and proven one-time pricing around $9-$50. Strong social distribution, but crowded; offer must include diagnosis/photo ordering rather than generic bio writing."},
+    {"id":"interviewloop","score":80,"allocationTL":700,"why":"High-intent deadline-driven need; many paid interview prep tools charge roughly $9-$25+ monthly or per pack. Crowded, but job-specific answer scaffolding can be delivered instantly."}
+  ],
+  "hold": [
+    {"id":"jobtailor","score":76,"reason":"Large demand but severe commoditization and generous free tiers from many incumbents."},
+    {"id":"refundready","score":69,"reason":"Good intent, but low ticket and numerous cheap/free letter generators; may work later as success-fee recovery rather than $7 template."},
+    {"id":"complaintcraft","score":67,"reason":"Clear pain but low willingness to pay for generic complaint writing."},
+    {"id":"rentready","score":65,"reason":"High pain in competitive rental markets, but weak evidence of standalone paid demand."},
+    {"id":"studysprint","score":63,"reason":"Huge market, heavily saturated by free and $10-$15/mo AI study apps."},
+    {"id":"partyplan","score":61,"reason":"Paid party-planning apps exist, but strongest paid wedge appears visual decor generation rather than text planning."},
+    {"id":"wardrobereset","score":58,"reason":"Willingness to pay exists, but full wardrobe apps already offer far richer persistent products."},
+    {"id":"tripbrief","score":57,"reason":"Very crowded; paid itinerary prices can be as low as $1-$5 per trip and many free alternatives exist."},
+    {"id":"babytrip","score":56,"reason":"Real family packing pain but incumbent family travel apps bundle this with much richer functionality."},
+    {"id":"language30","score":54,"reason":"Massive category but generic 30-day plans are easily substituted by established AI language apps and general LLMs."},
+    {"id":"movemate","score":52,"reason":"Useful problem but free/low-cost moving planners make a one-off $7 text plan weak."},
+    {"id":"subscriptionexit","score":51,"reason":"Strong pain but cancellation managers commonly offer free tracking and direct cancellation guidance."},
+    {"id":"homesellkit","score":48,"reason":"Listing copy already has many free tools and agent-focused products; private-seller frequency is low."},
+    {"id":"carsellkit","score":44,"reason":"Listing platforms themselves increasingly generate descriptions with AI, weakening the standalone wedge."},
+    {"id":"petsitterkit","score":38,"reason":"Abundant free printable templates; weak reason to pay for the current offer."}
+  ]
+}
