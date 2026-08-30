@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "live": true,
+  "currency": "TRY",
+  "hardCaps": {
+    "dailyBilledTRY": 500,
+    "totalBilledTRY": 5000,
+    "maxAverageDailyBudgetTRY": 250
+  },
+  "campaigns": [
+    {
+      "id": "flightclaim",
+      "name": "VE_RotarHakkim",
+      "enabled": true,
+      "weight": 0.40,
+      "countryCode": "TR",
+      "landingUrl": "https://sculptai-brown.vercel.app/ventures/rotarhakkim/?utm_source=google_ads&utm_campaign=VE_RotarHakkim",
+      "maxCpcTRY": 18,
+      "keywords": ["uçuş gecikme tazminatı", "uçuş iptal tazminat", "rötar tazminatı"],
+      "headlines": ["Uçuşun Gecikti mi?", "Tazminat Hakkını Kontrol Et", "Komisyonsuz Başvuru Paketi"],
+      "descriptions": ["Gecikme veya iptal sonrası olası hakkını kontrol et. Uygunsa başvuru paketini hazırla.", "Tazminattan yüzde verme. Tek seferlik ücretle kendi başvurunu hazırla."]
+    },
+    {
+      "id": "salaryask",
+      "name": "VE_SalaryAsk",
+      "enabled": true,
+      "weight": 0.30,
+      "countryCode": "US",
+      "landingUrl": "https://sculptai-brown.vercel.app/ventures/salaryask/?utm_source=google_ads&utm_campaign=VE_SalaryAsk",
+      "maxCpcTRY": 35,
+      "keywords": ["salary negotiation help", "counter offer salary", "salary negotiation script"],
+      "headlines": ["Know What To Counter", "Salary Negotiation Pack", "Don't Leave Money Behind"],
+      "descriptions": ["Turn your job offer into a counter strategy, email, call script and objection responses.", "One-time negotiation pack. No subscription. Built around your actual offer."]
+    },
+    {
+      "id": "staybid",
+      "name": "VE_StayBid",
+      "enabled": true,
+      "weight": 0.30,
+      "countryCode": "US",
+      "landingUrl": "https://sculptai-brown.vercel.app/frontier/staybid.html?utm_source=google_ads&utm_campaign=VE_StayBid",
+      "maxCpcTRY": 30,
+      "keywords": ["negotiate hotel price", "get better hotel deal", "hotel direct booking deal"],
+      "headlines": ["Make Hotels Compete", "Ask For A Better Hotel Deal", "Your Stay, Hotels Bid"],
+      "descriptions": ["Tell us the stay you want. The thesis: AI asks competing hotels for their best total-value offer.", "Price, breakfast, upgrades and flexibility can matter. Test the reverse-booking idea."]
+    }
+  ]
+}
