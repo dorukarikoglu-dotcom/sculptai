@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-30T13:54:58.942Z",
+  "updatedAt": "2026-08-30T14:58:30Z",
   "currency": "TRY",
   "hardCaps": {
     "dailyBilledTRY": 500,
@@ -53,6 +53,6 @@
   },
   "allocationDecision": {
     "changed": false,
-    "reason": "No VENTURE_EVENT or Stripe-related production runtime logs were present during the inspected hour, and metrics.json still contains no cumulative experiment observations. Existing normalized 0.40/0.30/0.30 weights are preserved; no lifecycle or capital changes are justified."
+    "reason": "No VENTURE_EVENT production runtime logs were present during the inspected hour. The connected live Stripe account contains no Checkout Sessions, and metrics.json still contains no cumulative experiment observations. Existing normalized 0.40/0.30/0.30 weights and hard caps are preserved; no lifecycle, capital, or acquisition changes are justified."
   }
 }
