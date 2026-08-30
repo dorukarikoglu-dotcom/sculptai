@@ -1,0 +1,157 @@
+// AI Venture Engine — Google Ads Search allocator
+// One-time setup: paste this into Google Ads > Tools > Scripts, authorize, then schedule Hourly.
+// Safety: requires a TRY-denominated account. Uses at most 250 TRY total *average* daily budget so
+// Google's documented 2x daily overdelivery cannot exceed the user's 500 TRY/day hard cap.
+// It also sizes each new day's plan so 2x that day's budgets cannot cross the 5,000 TRY total cap.
+
+const FEED_URL='https://sculptai-brown.vercel.app/venture-engine/acquisition-feed.json';
+const PREFIX='VE_';
+const EXPERIMENT_START='2026-08-30';
+
+function main(){
+  const account=AdsApp.currentAccount();
+  if(account.getCurrencyCode()!=='TRY'){
+    pauseAllManaged();
+    throw new Error('Safety stop: Venture Engine requires a TRY Google Ads account. Found '+account.getCurrencyCode());
+  }
+
+  const feed=loadFeed();
+  validateFeed(feed);
+  if(!feed.live){ pauseAllManaged(); Logger.log('Feed is not live; all VE campaigns paused.'); return; }
+
+  const today=formatDate(new Date(),account.getTimeZone());
+  const totalSpent=managedSpend(EXPERIMENT_START,today);
+  const todaySpent=managedSpend(today,today);
+  const dailyCap=Number(feed.hardCaps.dailyBilledTRY);
+  const totalCap=Number(feed.hardCaps.totalBilledTRY);
+  const avgCap=Number(feed.hardCaps.maxAverageDailyBudgetTRY);
+
+  if(todaySpent>=dailyCap || totalSpent>=totalCap){
+    pauseAllManaged();
+    Logger.log('Hard cap reached. today='+todaySpent.toFixed(2)+' total='+totalSpent.toFixed(2));
+    return;
+  }
+
+  const props=PropertiesService.getScriptProperties();
+  const planKey='VE_DAY_PLAN_'+today;
+  let plan;
+  try{ plan=JSON.parse(props.getProperty(planKey)||'null'); }catch(e){ plan=null; }
+
+  if(!plan){
+    const remainingDaily=Math.max(0,dailyCap-todaySpent);
+    const remainingTotal=Math.max(0,totalCap-totalSpent);
+    const safePool=Math.max(0,Math.min(avgCap,remainingDaily/2,remainingTotal/2));
+    plan=buildFrozenPlan(feed.campaigns,safePool);
+    props.setProperty(planKey,JSON.stringify(plan));
+    Logger.log('New frozen daily plan: '+JSON.stringify(plan));
+  }
+
+  const activeNames=new Set();
+  feed.campaigns.forEach(c=>{
+    const budget=Number(plan[c.id]||0);
+    if(c.enabled && budget>=1){
+      activeNames.add(c.name);
+      ensureSearchCampaign(c,budget);
+    }else{
+      const existing=findCampaign(c.name);
+      if(existing) existing.pause();
+    }
+  });
+
+  for(const c of AdsApp.campaigns().get()){
+    if(c.getName().indexOf(PREFIX)===0 && !activeNames.has(c.getName())) c.pause();
+  }
+
+  const afterToday=managedSpend(today,today);
+  const afterTotal=managedSpend(EXPERIMENT_START,today);
+  if(afterToday>=dailyCap || afterTotal>=totalCap) pauseAllManaged();
+  Logger.log('VE allocator complete. today='+afterToday.toFixed(2)+' / '+dailyCap+' total='+afterTotal.toFixed(2)+' / '+totalCap);
+}
+
+function loadFeed(){
+  const r=UrlFetchApp.fetch(FEED_URL,{muteHttpExceptions:true,followRedirects:true});
+  if(r.getResponseCode()!==200) throw new Error('Feed unavailable: HTTP '+r.getResponseCode());
+  return JSON.parse(r.getContentText());
+}
+
+function validateFeed(feed){
+  if(!feed || feed.currency!=='TRY' || !feed.hardCaps || !Array.isArray(feed.campaigns)) throw new Error('Invalid acquisition feed');
+  if(Number(feed.hardCaps.dailyBilledTRY)>500) throw new Error('Safety stop: daily cap exceeds 500 TRY');
+  if(Number(feed.hardCaps.totalBilledTRY)>5000) throw new Error('Safety stop: total cap exceeds 5,000 TRY');
+  if(Number(feed.hardCaps.maxAverageDailyBudgetTRY)>250) throw new Error('Safety stop: average daily budget pool exceeds 250 TRY');
+}
+
+function buildFrozenPlan(campaigns,pool){
+  const live=campaigns.filter(c=>c.enabled && Number(c.weight)>0);
+  const weightSum=live.reduce((s,c)=>s+Number(c.weight),0)||1;
+  const plan={};
+  live.forEach(c=>{ plan[c.id]=Math.floor((pool*Number(c.weight)/weightSum)*100)/100; });
+  return plan;
+}
+
+function managedSpend(from,to){
+  let total=0;
+  const q=`SELECT campaign.name, metrics.cost_micros FROM campaign WHERE campaign.name LIKE '${PREFIX}%' AND segments.date BETWEEN '${from}' AND '${to}'`;
+  for(const row of AdsApp.search(q)) total+=Number(row.metrics.costMicros||0)/1e6;
+  return total;
+}
+
+function pauseAllManaged(){
+  for(const c of AdsApp.campaigns().get()) if(c.getName().indexOf(PREFIX)===0) c.pause();
+}
+
+function findCampaign(name){
+  const it=AdsApp.campaigns().withCondition(`campaign.name = "${escapeCondition(name)}"`).get();
+  return it.hasNext()?it.next():null;
+}
+
+function ensureSearchCampaign(c,avgBudgetTRY){
+  let existing=findCampaign(c.name);
+  if(existing){
+    existing.getBudget().setAmount(avgBudgetTRY);
+    if(c.enabled) existing.enable(); else existing.pause();
+    return;
+  }
+
+  const geo=findCountryResource(c.countryCode);
+  if(!geo) throw new Error('No enabled country geo target found for '+c.countryCode+'; refusing untargeted spend.');
+
+  const customerId=AdsApp.currentAccount().getCustomerId();
+  let temp=-1;
+  const next=()=>temp--;
+  const budgetId=next();
+  const campaignId=next();
+  const adGroupId=next();
+  const budgetRes=`customers/${customerId}/campaignBudgets/${budgetId}`;
+  const campaignRes=`customers/${customerId}/campaigns/${campaignId}`;
+  const adGroupRes=`customers/${customerId}/adGroups/${adGroupId}`;
+  const ops=[];
+
+  ops.push({campaignBudgetOperation:{create:{resourceName:budgetRes,name:c.name+'_budget',amountMicros:String(Math.round(avgBudgetTRY*1e6)),deliveryMethod:'STANDARD',explicitlyShared:false}}});
+  ops.push({campaignOperation:{create:{resourceName:campaignRes,name:c.name,status:'PAUSED',advertisingChannelType:'SEARCH',campaignBudget:budgetRes,biddingStrategyType:'MANUAL_CPC',manualCpc:{enhancedCpcEnabled:false},networkSettings:{targetGoogleSearch:true,targetSearchNetwork:false},containsEuPoliticalAdvertising:'DOES_NOT_CONTAIN_EU_POLITICAL_ADVERTISING'}}});
+  ops.push({campaignCriterionOperation:{create:{campaign:campaignRes,location:{geoTargetConstant:geo},negative:false}}});
+  ops.push({adGroupOperation:{create:{resourceName:adGroupRes,name:c.name+'_adgroup',status:'ENABLED',campaign:campaignRes,type:'SEARCH_STANDARD',cpcBidMicros:String(Math.round(Number(c.maxCpcTRY)*1e6))}}});
+
+  (c.keywords||[]).slice(0,8).forEach(k=>{
+    ops.push({adGroupCriterionOperation:{create:{adGroup:adGroupRes,status:'ENABLED',keyword:{text:String(k).slice(0,80),matchType:'PHRASE'}}}});
+  });
+
+  const rsaId=next();
+  ops.push({adGroupAdOperation:{create:{resourceName:`customers/${customerId}/adGroupAds/${adGroupId}~${rsaId}`,adGroup:adGroupRes,status:'ENABLED',ad:{name:c.name+'_rsa',finalUrls:[c.landingUrl],responsiveSearchAd:{headlines:(c.headlines||[]).slice(0,15).map(x=>({text:String(x).slice(0,30)})),descriptions:(c.descriptions||[]).slice(0,4).map(x=>({text:String(x).slice(0,90)}))}}}}});
+
+  AdsApp.mutateAll(ops);
+  existing=findCampaign(c.name);
+  if(!existing) throw new Error('Campaign creation returned but campaign not found: '+c.name);
+  existing.enable();
+  Logger.log('Created and enabled '+c.name+' with average daily budget '+avgBudgetTRY.toFixed(2)+' TRY');
+}
+
+function findCountryResource(countryCode){
+  const cc=String(countryCode||'').toUpperCase().replace(/[^A-Z]/g,'');
+  const q=`SELECT geo_target_constant.resource_name, geo_target_constant.name, geo_target_constant.country_code, geo_target_constant.target_type FROM geo_target_constant WHERE geo_target_constant.country_code = '${cc}' AND geo_target_constant.target_type = 'Country' AND geo_target_constant.status = 'ENABLED'`;
+  for(const row of AdsApp.search(q)) return row.geoTargetConstant.resourceName;
+  return null;
+}
+
+function formatDate(d,tz){ return Utilities.formatDate(d,tz,'yyyy-MM-dd'); }
+function escapeCondition(s){ return String(s).replace(/\\/g,'\\\\').replace(/"/g,'\\"'); }
