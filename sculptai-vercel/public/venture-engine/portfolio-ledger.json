@@ -1,0 +1,58 @@
+{
+  "updatedAt": "2026-08-30T11:56:38.709Z",
+  "currency": "TRY",
+  "hardCaps": {
+    "dailyBilledTRY": 500,
+    "totalBilledTRY": 5000,
+    "maxAverageDailyBudgetTRY": 250
+  },
+  "capital": {
+    "verifiedRevenueTRY": 0,
+    "verifiedNetProfitTRY": 0,
+    "reinvestableCapitalTRY": 0,
+    "billedExternalAdSpendTRY": null,
+    "note": "No verified revenue or spend observations available in the production event ledger yet. Reinvestable profit does not raise the 5000 TRY external-spend hard cap."
+  },
+  "ventures": {
+    "flightclaim": {
+      "qualifiedVisits": 0,
+      "checkoutIntent": 0,
+      "verifiedPurchases": 0,
+      "revenue": 0,
+      "spend": null,
+      "grossProfitEstimate": 0,
+      "lifecycle": "TEST",
+      "acquisitionWeight": 0.4,
+      "reason": "Active search-intent test; insufficient qualified production data for reallocation."
+    },
+    "salaryask": {
+      "qualifiedVisits": 0,
+      "checkoutIntent": 0,
+      "verifiedPurchases": 0,
+      "revenue": 0,
+      "spend": null,
+      "grossProfitEstimate": 0,
+      "lifecycle": "TEST",
+      "acquisitionWeight": 0.3,
+      "reason": "Active search-intent test; insufficient qualified production data for reallocation."
+    },
+    "staybid": {
+      "qualifiedVisits": 0,
+      "checkoutIntent": 0,
+      "verifiedPurchases": 0,
+      "revenue": 0,
+      "spend": null,
+      "grossProfitEstimate": 0,
+      "lifecycle": "TEST",
+      "acquisitionWeight": 0.3,
+      "reason": "Frontier commitment test; insufficient qualified production data. Buy intent, when observed, is not revenue."
+    }
+  },
+  "paymentDeduplication": {
+    "stripeSessionIds": []
+  },
+  "allocationDecision": {
+    "changed": false,
+    "reason": "No VENTURE_EVENT payloads were present in production runtime logs during the inspected hour, and metrics.json contains no cumulative experiment observations. Existing normalized 0.40/0.30/0.30 weights are preserved to avoid reallocating without evidence."
+  }
+}
