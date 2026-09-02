@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ConsultReady — Walk into your aesthetic consultation prepared</title>
+<meta name="description" content="Turn your aesthetic goals and questions into a focused surgeon-consultation brief. Educational preparation only; not medical advice.">
+<style>
+:root{--ink:#172033;--muted:#687086;--line:#e5e8ef;--paper:#fff;--bg:#f6f7fa;--accent:#243b6b}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.wrap{max-width:860px;margin:auto;padding:24px}.nav{font-weight:850;letter-spacing:-.02em;padding:10px 0}.hero{padding:68px 0 28px}.eyebrow{font-size:12px;font-weight:800;letter-spacing:.12em;color:#59637a}.hero h1{font-size:clamp(42px,7vw,72px);line-height:.98;letter-spacing:-.055em;margin:12px 0 18px;max-width:780px}.hero p{font-size:19px;line-height:1.65;color:var(--muted);max-width:720px}.grid{display:grid;grid-template-columns:1.15fr .85fr;gap:20px}@media(max-width:760px){.grid{grid-template-columns:1fr}.hero{padding-top:42px}}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:20px;padding:25px;box-shadow:0 8px 30px rgba(30,42,70,.04)}label{display:block;font-size:13px;font-weight:750;margin:16px 0 7px}select,textarea{width:100%;border:1px solid #d7dce6;border-radius:12px;padding:12px 13px;background:white;color:var(--ink);font:inherit;outline:none}textarea{min-height:92px;resize:vertical}select:focus,textarea:focus{border-color:#7d8dac;box-shadow:0 0 0 3px rgba(36,59,107,.08)}button{width:100%;border:0;border-radius:12px;background:var(--accent);color:white;padding:15px 18px;font-weight:850;font-size:15px;margin-top:18px;cursor:pointer}button:disabled{opacity:.6;cursor:wait}.mini{font-size:12px;line-height:1.55;color:var(--muted);margin-top:10px}.side h2{margin-top:0;font-size:20px}.side ul{padding-left:19px;color:#4f596f;line-height:1.8}.pricebox{border-top:1px solid var(--line);margin-top:22px;padding-top:18px}.price{font-size:34px;font-weight:900;letter-spacing:-.04em}.hold{font-size:12px;font-weight:750;color:#8a5b12;background:#fff7e6;border:1px solid #f3d5a3;border-radius:10px;padding:10px 12px;margin-top:10px}.result{display:none;margin-top:22px}.result pre{white-space:pre-wrap;font:inherit;line-height:1.68;color:#30394b;margin:0}.error{display:none;color:#9f1c1c;background:#fff1f1;border:1px solid #ffd0d0;border-radius:10px;padding:11px 12px;margin-top:12px}.trust{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}.pill{font-size:12px;border:1px solid var(--line);background:white;border-radius:999px;padding:8px 11px;color:#5c6577}.foot{font-size:12px;color:#7a8292;line-height:1.6;padding:30px 0 50px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="nav">SculptAI <span style="font-weight:500;color:#8a91a0">/ ConsultReady</span></div>
+  <section class="hero">
+    <div class="eyebrow">AESTHETIC CONSULTATION PREP</div>
+    <h1>Know what to ask before you make a surgical decision.</h1>
+    <p>Tell us what you are considering, what you want to change, and what you are unsure about. ConsultReady turns that into a focused question-and-trade-off brief for your conversation with a licensed surgeon.</p>
+    <div class="trust"><span class="pill">No beauty score</span><span class="pill">No clinic referrals</span><span class="pill">No diagnosis</span><span class="pill">No photo required</span></div>
+  </section>
+
+  <div class="grid">
+    <div class="card">
+      <form id="form">
+        <label for="procedure">What are you considering?</label>
+        <select id="procedure">
+          <option value="rhinoplasty">Rhinoplasty</option><option value="facelift">Facelift</option><option value="upper-blepharoplasty">Upper blepharoplasty</option><option value="lower-blepharoplasty">Lower blepharoplasty</option><option value="breast-augmentation">Breast augmentation</option><option value="breast-reduction">Breast reduction</option><option value="mastopexy">Breast lift</option><option value="abdominoplasty">Abdominoplasty</option><option value="liposuction">Liposuction</option><option value="gynecomastia">Gynecomastia surgery</option><option value="otoplasty">Otoplasty</option><option value="other">Other aesthetic procedure</option>
+        </select>
+        <label for="goal">What are you hoping to achieve?</label>
+        <textarea id="goal" maxlength="700" placeholder="Example: I want a subtle change and care more about looking natural than having a dramatic transformation." required></textarea>
+        <label for="concern">What are you most unsure or worried about?</label>
+        <textarea id="concern" maxlength="700" placeholder="Example: I don't understand what trade-offs I should ask about or how to discuss revision and recovery."></textarea>
+        <label for="proposedPlan">Were you already given a proposed plan or quote? (optional)</label>
+        <textarea id="proposedPlan" maxlength="1200" placeholder="Paste only the non-identifying parts you want help turning into questions. Do not include names, contact details, medical records, or photos."></textarea>
+        <label for="prior">Any prior procedure context you want the brief to account for? (optional)</label>
+        <textarea id="prior" maxlength="500" placeholder="Keep this general. Do not upload medical records or sensitive identifiers."></textarea>
+        <button id="go" type="submit">Generate my consultation brief</button>
+        <div class="mini">Prototype access is currently free while the commercial operating structure is being finalized. No payment is collected on this page.</div>
+        <div class="error" id="err"></div>
+      </form>
+      <div class="result card" id="result"><pre id="out"></pre></div>
+    </div>
+    <aside class="card side">
+      <h2>What you get</h2>
+      <ul><li>Your goal reflected back clearly</li><li>8–12 procedure-relevant questions for the consultation</li><li>Trade-offs worth making explicit</li><li>What is still missing from the decision</li><li>A one-sentence way to explain your goal</li></ul>
+      <div class="pricebox">
+        <div style="font-size:12px;font-weight:800;color:#697386">PLANNED ONE-TIME PRICE</div>
+        <div class="price">$29</div>
+        <div class="mini">No subscription. When commercial launch is legally cleared, the stage-zero proof is one genuine paid report — not clicks or signups.</div>
+        <div class="hold">Payment is intentionally disabled until the applicable university/Technopark operating route is confirmed.</div>
+      </div>
+    </aside>
+  </div>
+  <div class="foot">ConsultReady is an educational preparation tool. It does not provide medical advice, diagnosis, candidacy assessment, treatment selection, surgeon recommendations, or predicted results. Decisions about care belong in a consultation with an appropriately licensed clinician.</div>
+</div>
+<script>
+const q=new URLSearchParams(location.search),source=q.get('utm_source')||'direct',campaign=q.get('utm_campaign')||'';
+const track=e=>fetch('/api/venture-event',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:'consultready',event:e,source,campaign,value:29,currency:'USD'})}).catch(()=>{});
+track('page_view');
+form.addEventListener('submit',async e=>{
+  e.preventDefault();err.style.display='none';result.style.display='none';go.disabled=true;go.textContent='Building your brief…';track('offer_click');
+  try{
+    const r=await fetch('/api/consultready',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({procedure:procedure.value,goal:goal.value,concern:concern.value,proposedPlan:proposedPlan.value,prior:prior.value})});
+    const d=await r.json();
+    if(!r.ok||!d.report) throw new Error('The brief could not be generated right now.');
+    out.textContent=d.report;result.style.display='block';result.scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(x){err.textContent=x.message||'Something went wrong.';err.style.display='block'}
+  finally{go.disabled=false;go.textContent='Generate my consultation brief'}
+});
+</script>
+</body>
+</html>
