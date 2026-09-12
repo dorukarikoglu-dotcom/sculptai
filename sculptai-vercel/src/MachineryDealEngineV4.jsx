@@ -139,7 +139,8 @@ export default function MachineryDealEngineV4() {
 
   const allocation = useMemo(() => snapshotAllocation(data.learningSnapshot, data.events), [data.learningSnapshot, data.events])
   const storage = storageLabel(status.persisted, data.lastPersistedAt)
-  const confidence = data.counts.uniqueObservations >= 1000 && data.tierBreakdown.A >= 100 ? 'high' : data.counts.uniqueObservations >= 500 && data.tierBreakdown.A >= 50 ? 'medium' : data.counts.uniqueObservations >= 100 && data.tierBreakdown.A >= 25 ? 'low-medium' : 'low'
+  const confidence = !status.persisted ? 'unverified' : data.counts.uniqueObservations >= 1000 && data.tierBreakdown.A >= 100 ? 'high' : data.counts.uniqueObservations >= 500 && data.tierBreakdown.A >= 50 ? 'medium' : data.counts.uniqueObservations >= 100 && data.tierBreakdown.A >= 25 ? 'low-medium' : 'low'
+  const verifiedValue = value => status.persisted ? value : '—'
   const button = active => ({ border: '1px solid #334155', background: active ? '#7c3aed' : 'transparent', color: '#fff', padding: '9px 12px', borderRadius: 10, fontWeight: 800, cursor: 'pointer' })
 
   return <div style={{ minHeight: '100vh', background: '#050811', color: '#e5e7eb', fontFamily: 'Inter,system-ui' }}><div style={{ maxWidth: 1360, margin: '0 auto', padding: 26 }}>
@@ -152,22 +153,22 @@ export default function MachineryDealEngineV4() {
       {!status.persisted ? <div style={{ marginTop: 18, border: '1px solid #7f1d1d', background: '#250b0b', color: '#fecaca', borderRadius: 12, padding: 14 }}><b>Durable storage is not verified.</b> Counts are intentionally hidden instead of showing seeded or local fallback data. {status.error ? <span style={{ color: '#fca5a5' }}>({status.error})</span> : null}</div> : null}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(175px,1fr))', gap: 10, marginTop: 18 }}>
-        <Metric value={data.counts.uniqueObservations} label="Unique machines" detail="fingerprint-deduplicated" />
-        <Metric value={data.tierBreakdown.A} label="Tier-A evidence" detail="verified sold / hammer" />
-        <Metric value={data.counts.sourceLineage} label="Source lineage" detail="distinct source records" />
-        <Metric value={data.counts.askPricePoints} label="Ask-price points" detail="distinct source + price" />
-        <Metric value={data.counts.liveEvents} label="Live events" detail="buyer, inventory, deal, email" />
+        <Metric value={verifiedValue(data.counts.uniqueObservations)} label="Unique machines" detail="fingerprint-deduplicated" />
+        <Metric value={verifiedValue(data.tierBreakdown.A)} label="Tier-A evidence" detail="verified sold / hammer" />
+        <Metric value={verifiedValue(data.counts.sourceLineage)} label="Source lineage" detail="distinct source records" />
+        <Metric value={verifiedValue(data.counts.askPricePoints)} label="Ask-price points" detail="distinct source + price" />
+        <Metric value={verifiedValue(data.counts.liveEvents)} label="Live events" detail="buyer, inventory, deal, email" />
         <Metric value={confidence} label="Learning confidence" detail="milestone-gated" />
       </div>
 
-      <div style={{ marginTop: 10, color: '#94a3b8', fontSize: 12 }}>Last persisted: {dateTime(data.lastPersistedAt)} · latest server snapshot: {dateTime(data.learningSnapshot?.generatedAt)} · model families: {data.counts.modelFamilies}</div>
+      <div style={{ marginTop: 10, color: '#94a3b8', fontSize: 12 }}>Last persisted: {dateTime(data.lastPersistedAt)} · latest server snapshot: {dateTime(data.learningSnapshot?.generatedAt)} · model families: {verifiedValue(data.counts.modelFamilies)}</div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.3fr) minmax(300px,.7fr)', gap: 14, marginTop: 16 }}>
-        <Card><h3 style={{ marginTop: 0 }}>Evidence quality</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>{Object.entries(data.tierBreakdown).map(([name, count]) => <div key={name} style={{ background: '#0b1220', borderRadius: 10, padding: 12 }}><div style={{ color: name === 'A' ? '#86efac' : name === 'B' ? '#93c5fd' : name === 'C' ? '#fde68a' : '#94a3b8', fontWeight: 900 }}>TIER {name}</div><div style={{ fontSize: 26, fontWeight: 900 }}>{count}</div></div>)}</div><p style={{ color: '#94a3b8', fontSize: 12, marginBottom: 0 }}>A = explicit transaction price; B = verified sold without final price; C = active/archived ask evidence; D = weak or incomplete evidence.</p></Card>
+        <Card><h3 style={{ marginTop: 0 }}>Evidence quality</h3><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 8 }}>{Object.entries(data.tierBreakdown).map(([name, count]) => <div key={name} style={{ background: '#0b1220', borderRadius: 10, padding: 12 }}><div style={{ color: name === 'A' ? '#86efac' : name === 'B' ? '#93c5fd' : name === 'C' ? '#fde68a' : '#94a3b8', fontWeight: 900 }}>TIER {name}</div><div style={{ fontSize: 26, fontWeight: 900 }}>{verifiedValue(count)}</div></div>)}</div><p style={{ color: '#94a3b8', fontSize: 12, marginBottom: 0 }}>A = explicit transaction price; B = verified sold without final price; C = active/archived ask evidence; D = weak or incomplete evidence.</p></Card>
         <Card><h3 style={{ marginTop: 0 }}>Persisted milestones</h3>{data.milestones.length ? data.milestones.map(item => <Milestone key={`${item.dimension}-${item.threshold}`} item={item} />) : <div style={{ color: '#64748b', fontSize: 12 }}>No persisted milestone rows.</div>}</Card>
       </div>
 
-      <Card style={{ marginTop: 16 }}><h3 style={{ marginTop: 0 }}>Server-side learning allocation</h3>{allocation.map(row => <div key={row.segment} style={{ display: 'grid', gridTemplateColumns: 'minmax(220px,1.5fr) .5fr .5fr .5fr minmax(120px,1fr)', gap: 10, padding: '12px 0', borderTop: '1px solid #1f2937', alignItems: 'center' }}><b>{row.segment}</b><div>{row.prior}% prior</div><div>{row.weight.toFixed(1)}%</div><div>n={row.n}</div><div style={{ color: row.weight > row.prior ? '#86efac' : row.weight < row.prior ? '#fca5a5' : '#cbd5e1', fontWeight: 800 }}>{row.weight > row.prior ? '↑ allocate more' : row.weight < row.prior ? '↓ allocate less' : '→ hold'}</div></div>)}</Card>
+      <Card style={{ marginTop: 16 }}><h3 style={{ marginTop: 0 }}>Server-side learning allocation</h3>{status.persisted ? allocation.map(row => <div key={row.segment} style={{ display: 'grid', gridTemplateColumns: 'minmax(220px,1.5fr) .5fr .5fr .5fr minmax(120px,1fr)', gap: 10, padding: '12px 0', borderTop: '1px solid #1f2937', alignItems: 'center' }}><b>{row.segment}</b><div>{row.prior}% prior</div><div>{row.weight.toFixed(1)}%</div><div>n={row.n}</div><div style={{ color: row.weight > row.prior ? '#86efac' : row.weight < row.prior ? '#fca5a5' : '#cbd5e1', fontWeight: 800 }}>{row.weight > row.prior ? '↑ allocate more' : row.weight < row.prior ? '↓ allocate less' : '→ hold'}</div></div>) : <div style={{ color: '#64748b', fontSize: 12 }}>No verified persisted snapshot or event history.</div>}</Card>
 
       <Card style={{ marginTop: 16, overflowX: 'auto' }}><h3 style={{ marginTop: 0 }}>Recent persisted machine observations</h3>{data.observations.length ? <div style={{ minWidth: 900 }}>{data.observations.slice(0, 30).map(item => <div key={item.machineFingerprint} style={{ display: 'grid', gridTemplateColumns: '1.4fr .45fr .35fr .8fr .8fr .45fr .6fr', gap: 10, padding: '11px 0', borderTop: '1px solid #1f2937', alignItems: 'center', fontSize: 12 }}><div><b>{item.make || '—'} {item.model || item.modelFamily || ''}</b><div style={{ color: '#64748b' }}>{item.location || item.category || '—'}</div></div><div>{item.manufactureYear || '—'}</div><div style={{ color: item.evidenceTier === 'A' ? '#86efac' : '#cbd5e1', fontWeight: 900 }}>{item.evidenceTier}</div><div>{money(item.askingPrice, item.askingCurrency)}</div><div>{money(item.soldPrice ?? item.hammerPrice, item.saleCurrency)}</div><div>{item.sourceCount} src</div><div>{dateTime(item.lastSeen)}</div></div>)}</div> : <div style={{ color: '#64748b', fontSize: 12 }}>No persisted observations yet.</div>}</Card>
 
